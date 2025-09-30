@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { GoogleGenAI } from "@google/genai";
-import { Item, Suggestion, FeedbackMessage, UserNotification, Reseller, Transaction, TransactionType, AlertConfigType } from '../types';
+import { Item, Suggestion, FeedbackMessage, UserNotification, Reseller, Transaction } from '../types';
 import { 
     NetflixIcon, YoutubeIcon, SpotifyIcon, DisneyPlusIcon, 
     CapcutIcon, CanvaIcon, ChatGPTIcon, GameControllerIcon, BriefcaseIcon,
@@ -27,32 +27,6 @@ const parsePrice = (priceStr: string): number => {
     }
     return isNaN(value) ? 0 : value;
 };
-
-// Helper function to get the numeric threshold for an alert
-const getAlertThreshold = (item: Item): number | null => {
-    const config = item.alertConfig || { type: AlertConfigType.DEFAULT, value: 0 };
-    switch (config.type) {
-        case AlertConfigType.DISABLED:
-            return null;
-        case AlertConfigType.QUANTITY:
-            return config.value;
-        case AlertConfigType.PERCENTAGE:
-            // Ensure calculation is safe if minStock is 0
-            return item.minStock > 0 ? Math.floor(item.minStock * (config.value / 100)) : 0;
-        case AlertConfigType.DEFAULT:
-        default:
-            return item.minStock;
-    }
-};
-
-const getAlertThresholdText = (item: Item): string | null => {
-    const threshold = getAlertThreshold(item);
-    if (threshold === null) {
-        return null; // Don't show anything if disabled
-    }
-    return `Notifikasi di ≤ ${threshold} unit`;
-};
-
 
 const Spinner: React.FC = () => (
     <svg className="animate-spin h-5 w-5 text-cyan-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -84,45 +58,42 @@ const productIconMap: Record<string, React.FC<any>> = {
 const ProductPlanCard: React.FC<{ plan: Item; onAddToCart: (itemId: number) => void; onQuickBuy: (itemId: number) => void; onSelectItemDetail: (item: Item) => void; onExplainFeature: (feature: string) => void; wishlist: number[]; onToggleWishlist: (itemId: number) => void; }> = ({ plan, onAddToCart, onQuickBuy, onSelectItemDetail, onExplainFeature, wishlist, onToggleWishlist }) => {
     const isOutOfStock = plan.currentStock <= 0;
     const isLowStock = !isOutOfStock && plan.currentStock <= plan.minStock;
-    const alertText = getAlertThresholdText(plan);
     const isWishlisted = wishlist.includes(plan.id);
     
     return (
         <div className={`relative bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 flex flex-col h-full border border-gray-200 dark:border-gray-700 hover:border-cyan-500 dark:hover:border-cyan-500 transition-all transform hover:-translate-y-1 ${isOutOfStock ? 'opacity-60 grayscale' : ''}`}>
              <button 
                 onClick={(e) => { e.stopPropagation(); onToggleWishlist(plan.id); }}
-                className="absolute top-3 right-3 p-2 rounded-full bg-white/50 dark:bg-gray-900/50 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors z-10"
+                className="absolute top-4 right-4 p-2 rounded-full bg-white/50 dark:bg-gray-900/50 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors z-10"
                 aria-label={isWishlisted ? "Hapus dari wishlist" : "Tambah ke wishlist"}
             >
                 <HeartIcon className={`h-6 w-6 ${isWishlisted ? 'text-red-500 fill-current' : 'text-gray-400'}`} />
             </button>
             <div onClick={() => onSelectItemDetail(plan)} className="cursor-pointer flex-grow flex flex-col">
-                <h4 className="text-xl font-bold text-gray-800 dark:text-white">{plan.planName}</h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{plan.warranty}</p>
-                <p className="text-4xl font-extrabold text-cyan-500 mb-4">{plan.price}</p>
-            </div>
-             <div className="my-4 text-sm">
-                {isOutOfStock ? (
-                    <p className="font-bold text-red-500">Stok Habis</p>
-                ) : isLowStock ? (
-                    <p className="font-semibold text-orange-500">Stok menipis: {plan.currentStock} tersisa</p>
-                ) : (
-                    <p className="text-gray-500 dark:text-gray-400">Stok tersedia: {plan.currentStock}</p>
-                )}
-                {alertText && !isOutOfStock && (
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{alertText}</p>
-                )}
-            </div>
-             <ul className="space-y-2 mb-6 text-gray-600 dark:text-gray-300 flex-grow">
+                <div className="flex-shrink-0">
+                    <h4 className="text-xl font-bold text-gray-800 dark:text-white pr-8">{plan.planName}</h4>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{plan.warranty}</p>
+                    <p className="text-4xl font-extrabold text-cyan-500 mb-4">{plan.price}</p>
+                    <div className="text-sm mb-6">
+                        {isOutOfStock ? (
+                            <p className="font-bold text-red-500">Stok Habis</p>
+                        ) : isLowStock ? (
+                            <p className="font-semibold text-orange-500">Stok menipis: {plan.currentStock} tersisa</p>
+                        ) : (
+                            <p className="text-gray-500 dark:text-gray-400">Stok tersedia: {plan.currentStock}</p>
+                        )}
+                    </div>
+                </div>
+                 <ul className="space-y-3 text-gray-600 dark:text-gray-300 flex-grow">
                     {plan.features.map((feature, i) => (
                         <li key={i} className="flex items-start justify-between group">
                             <div className="flex items-start">
-                                <CheckmarkIcon className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                                <CheckmarkIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
                                 <span>{feature}</span>
                             </div>
                              <button 
                                 onClick={(e) => { e.stopPropagation(); onExplainFeature(feature); }}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity ml-2 p-1 rounded-full bg-cyan-100 dark:bg-cyan-900"
+                                className="opacity-0 group-hover:opacity-100 transition-opacity ml-2 p-1 rounded-full bg-cyan-100 dark:bg-cyan-900 flex-shrink-0"
                                 aria-label={`Jelaskan fitur ${feature}`}
                             >
                                 <SparklesIcon className="h-4 w-4 text-cyan-500" />
@@ -130,13 +101,14 @@ const ProductPlanCard: React.FC<{ plan: Item; onAddToCart: (itemId: number) => v
                         </li>
                     ))}
                 </ul>
-             <div className="mt-auto">
+            </div>
+             <div className="mt-6 flex-shrink-0">
                 {isOutOfStock ? (
                     <button disabled className="w-full text-center bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-semibold py-3 rounded-lg cursor-not-allowed">
                         Stok Habis
                     </button>
                 ) : (
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-3">
                         <button onClick={() => onQuickBuy(plan.id)} className="w-full text-center bg-cyan-100 dark:bg-cyan-900/50 text-cyan-600 dark:text-cyan-400 font-semibold py-3 rounded-lg hover:bg-cyan-200 dark:hover:bg-cyan-900/80 transition-colors flex items-center justify-center gap-2">
                             Beli Cepat
                             <ArrowRightIcon className="h-4 w-4" />
@@ -160,23 +132,23 @@ const ProductCard: React.FC<{ groupName: string; plans: Item[], onAddToCart: (it
     return (
         <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl shadow-md overflow-hidden transition-shadow hover:shadow-xl">
             <button 
-                className="w-full text-left p-8"
+                className="w-full text-left p-6"
                 onClick={() => setIsOpen(!isOpen)}
                 aria-expanded={isOpen}
             >
-                <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-4">
-                        <ProductIcon className="h-12 w-12 text-cyan-500" />
-                        <div>
-                            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{groupName}</h3>
-                            <p className="text-gray-600 dark:text-gray-400">{description}</p>
+                <div className="flex justify-between items-center gap-4">
+                    <div className="flex items-center gap-4 min-w-0">
+                        <ProductIcon className="h-10 w-10 text-cyan-500 flex-shrink-0" />
+                        <div className="min-w-0">
+                            <h3 className="text-2xl font-bold text-gray-900 dark:text-white truncate">{groupName}</h3>
+                            <p className="text-gray-600 dark:text-gray-400 truncate">{description}</p>
                         </div>
                     </div>
-                    {isOpen ? <ChevronUpIcon className="h-8 w-8 text-gray-500 flex-shrink-0" /> : <ChevronDownIcon className="h-8 w-8 text-gray-500 flex-shrink-0" />}
+                    {isOpen ? <ChevronUpIcon className="h-6 w-6 text-gray-500 flex-shrink-0" /> : <ChevronDownIcon className="h-6 w-6 text-gray-500 flex-shrink-0" />}
                 </div>
             </button>
             {isOpen && (
-                <div className="p-8 pt-0">
+                <div className="px-6 pb-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {plans.map(plan => <ProductPlanCard key={plan.id} plan={plan} onAddToCart={onAddToCart} onQuickBuy={onQuickBuy} onSelectItemDetail={onSelectItemDetail} onExplainFeature={onExplainFeature} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}
                     </div>
@@ -199,13 +171,13 @@ const CategorySection: React.FC<{ category: string; groups: Item[][]; onAddToCar
                 aria-expanded={isOpen}
             >
                 <div className="flex items-center gap-4">
-                    <CategoryIcon className="h-12 w-12 text-cyan-500" />
+                    <CategoryIcon className="h-10 w-10 text-cyan-500" />
                     <div>
                         <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{category}</h3>
                         <p className="text-gray-600 dark:text-gray-400">{info.description}</p>
                     </div>
                 </div>
-                {isOpen ? <ChevronUpIcon className="h-8 w-8 text-gray-500" /> : <ChevronDownIcon className="h-8 w-8 text-gray-500" />}
+                {isOpen ? <ChevronUpIcon className="h-7 w-7 text-gray-500" /> : <ChevronDownIcon className="h-7 w-7 text-gray-500" />}
             </button>
             {isOpen && (
                  <div className="p-6 pt-0 space-y-8">
@@ -302,63 +274,80 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
     const cartItemCount = cart.reduce((total, item) => total + item.quantity, 0);
     const wishlistItemCount = wishlist.length;
 
-    const { categories, groupedData } = useMemo(() => {
+    const { categoriesWithCount, groupedData } = useMemo(() => {
+        const lowerCaseSearchTerm = searchTerm.toLowerCase();
+        // 1. Filter by search term first
         const visibleItems = items.filter(item => 
             item.isVisibleInStore && 
-            (item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.groupName.toLowerCase().includes(searchTerm.toLowerCase()))
+            (item.name.toLowerCase().includes(lowerCaseSearchTerm) || 
+             item.groupName.toLowerCase().includes(lowerCaseSearchTerm) ||
+             item.category.toLowerCase().includes(lowerCaseSearchTerm))
         );
-
-        const allCategories = ['All', ...Object.keys(categoryInfo)];
+    
+        // 2. Calculate counts based on the searched items (counting unique product groups)
+        const allProductGroups = new Set<string>();
+        const categoryCounts: Record<string, Set<string>> = {};
+        visibleItems.forEach(item => {
+            allProductGroups.add(item.groupName);
+            if (!categoryCounts[item.category]) {
+                categoryCounts[item.category] = new Set();
+            }
+            categoryCounts[item.category].add(item.groupName);
+        });
+    
+        const existingCategories = Object.keys(categoryInfo).filter(catName => categoryCounts[catName]?.size > 0);
+    
+        const categoriesWithCount = [
+            { name: 'All', count: allProductGroups.size },
+            ...existingCategories.map(catName => ({
+                name: catName,
+                count: categoryCounts[catName].size
+            }))
+        ];
         
+        // 3. Filter by the active category
         const filteredByCategory = activeCategory === 'All'
             ? visibleItems
             : visibleItems.filter(item => item.category === activeCategory);
-
+    
+        // 4. Group the category-filtered items for rendering
         const itemsByCategory = filteredByCategory.reduce((acc, item) => {
             (acc[item.category] = acc[item.category] || []).push(item);
             return acc;
         }, {} as Record<string, Item[]>);
         
-        const data = Object.entries(itemsByCategory).map(([category, items]) => {
-            const itemsByGroup = (items as Item[]).reduce((acc, item) => {
+        // 5. Process for rendering (group by groupName, sort plans)
+        const data = Object.entries(itemsByCategory).map(([category, itemsInCategory]) => {
+            const itemsByGroup = (itemsInCategory as Item[]).reduce((acc, item) => {
                 (acc[item.groupName] = acc[item.groupName] || []).push(item);
                 return acc;
             }, {} as Record<string, Item[]>);
             
-            // Apply sorting to plans within each group
             Object.values(itemsByGroup).forEach(plans => {
                 plans.sort((a, b) => {
                     switch (sortOption) {
-                        case 'name-asc':
-                            return a.planName.localeCompare(b.planName);
-                        case 'name-desc':
-                            return b.planName.localeCompare(a.planName);
-                        case 'price-asc':
-                            return parsePrice(a.price) - parsePrice(b.price);
-                        case 'price-desc':
-                            return parsePrice(b.price) - parsePrice(a.price);
-                        case 'stock-desc':
-                            return b.currentStock - a.currentStock;
-                        case 'stock-asc':
-                            return a.currentStock - b.currentStock;
-                        case 'default':
-                        default:
-                            return 0; // Keep original order
+                        case 'name-asc': return a.planName.localeCompare(b.planName);
+                        case 'name-desc': return b.planName.localeCompare(a.planName);
+                        case 'price-asc': return parsePrice(a.price) - parsePrice(b.price);
+                        case 'price-desc': return parsePrice(b.price) - parsePrice(a.price);
+                        case 'stock-desc': return b.currentStock - a.currentStock;
+                        case 'stock-asc': return a.currentStock - b.currentStock;
+                        default: return 0;
                     }
                 });
             });
-
+    
             return { category, groups: Object.values(itemsByGroup) };
         });
-
-        return { categories: allCategories, groupedData: data };
+    
+        return { categoriesWithCount, groupedData: data };
     }, [items, searchTerm, activeCategory, sortOption]);
 
     const topResellers = useMemo(() => {
         return resellers
             .map(reseller => {
                 const sales = transactions
-                    .filter(t => t.type === TransactionType.OUT && t.resellerId === reseller.id)
+                    .filter(t => t.resellerId === reseller.id)
                     .reduce((sum, t) => sum + t.quantity, 0);
                 return { ...reseller, sales };
             })
@@ -522,11 +511,11 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
                 )}
 
                 {/* Search and Filter */}
-                <div className="mb-10 p-4 bg-white dark:bg-gray-800 rounded-xl shadow-md sticky top-[70px] z-30">
+                <div className="mb-12 p-4 bg-white dark:bg-gray-800 rounded-xl shadow-md sticky top-[70px] z-30">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <input
                             type="text"
-                            placeholder="Cari produk favoritmu..."
+                            placeholder="Cari produk, layanan, atau kategori..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-cyan-500 outline-none transition"
@@ -547,26 +536,33 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
                         </select>
                     </div>
                     <div className="mt-4 flex flex-wrap gap-2">
-                        {categories.map(cat => (
+                        {categoriesWithCount.map(({ name, count }) => (
                             <button
-                                key={cat}
-                                onClick={() => setActiveCategory(cat)}
-                                className={`px-4 py-2 text-sm font-semibold rounded-full transition-colors ${
-                                    activeCategory === cat
+                                key={name}
+                                onClick={() => setActiveCategory(name)}
+                                className={`px-3 py-1.5 text-sm font-semibold rounded-full transition-colors flex items-center gap-2 ${
+                                    activeCategory === name
                                         ? 'bg-cyan-500 text-white'
                                         : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'
                                 }`}
                             >
-                                {cat}
+                                <span>{name}</span>
+                                <span className={`px-2 py-0.5 text-xs rounded-full font-bold ${
+                                    activeCategory === name
+                                        ? 'bg-white/20 text-white'
+                                        : 'bg-gray-300 dark:bg-gray-600'
+                                }`}>
+                                    {count}
+                                </span>
                             </button>
                         ))}
                     </div>
                 </div>
 
 
-                <div className="space-y-10">
+                <div className="space-y-12">
                     {groupedData.length > 0 ? (
-                        groupedData.map(({ category, groups }, index) => (
+                        groupedData.map(({ category, groups }) => (
                             <CategorySection 
                                 key={category} 
                                 category={category} 
