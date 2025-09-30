@@ -6,6 +6,7 @@ import ResellerGuide from './components/ResellerGuide';
 import RefundCalculator from './components/RefundCalculator';
 import { NotificationProvider } from './contexts/NotificationContext';
 import Cart from './components/Cart';
+import Wishlist from './components/Wishlist';
 import ProductDetailView from './components/ProductDetailView';
 import { StoreIcon, DashboardIcon, UserGroupIcon, CalculatorIcon } from './components/Icons';
 
@@ -153,7 +154,9 @@ function App() {
     const [activeView, setActiveView] = useState<View>('store');
     const [feedback, setFeedback] = useState<FeedbackMessage | null>(null);
     const [cart, setCart] = useLocalStorage<CartItem[]>('user-cart', []);
+    const [wishlist, setWishlist] = useLocalStorage<number[]>('user-wishlist', []);
     const [isCartOpen, setIsCartOpen] = useState(false);
+    const [isWishlistOpen, setIsWishlistOpen] = useState(false);
     const [cartView, setCartView] = useState<'cart' | 'checkout' | 'success'>('cart');
     const [selectedItemDetail, setSelectedItemDetail] = useState<Item | null>(null);
 
@@ -207,6 +210,7 @@ function App() {
             setSuggestions(current => Array.isArray(current) ? current : initialSuggestions);
             setUserNotifications(current => Array.isArray(current) ? current : initialUserNotifications);
             setCart(current => Array.isArray(current) ? current : []);
+            setWishlist(current => Array.isArray(current) ? current.filter(id => typeof id === 'number') : []);
         };
         migrateData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -224,6 +228,14 @@ function App() {
     const handleAddItem = (itemData: Omit<Item, 'id'>) => {
         setItems(prev => [...prev, { ...itemData, id: Date.now() }]);
         showFeedback({ message: `Item "${itemData.name}" berhasil ditambahkan.`, type: 'success' });
+    };
+
+    const handleBulkAddItems = (newItems: Omit<Item, 'id'>[]) => {
+        const itemsWithIds = newItems.map((item, index) => ({
+            ...item,
+            id: Date.now() + index,
+        }));
+        setItems(prev => [...prev, ...itemsWithIds]);
     };
 
     const handleUpdateItem = (updatedItem: Item) => {
@@ -328,6 +340,18 @@ function App() {
         setUserNotifications(prev => prev.filter(n => n.id !== id));
     };
 
+    // Wishlist Handler
+    const handleToggleWishlist = (itemId: number) => {
+        setWishlist(prev => {
+            const isWishlisted = prev.includes(itemId);
+            if (isWishlisted) {
+                return prev.filter(id => id !== itemId);
+            } else {
+                return [...prev, itemId];
+            }
+        });
+    };
+
     // Cart Handlers
     const handleAddToCart = (itemId: number) => {
         const item = items.find(i => i.id === itemId);
@@ -409,6 +433,7 @@ function App() {
                             onUpdateItem={handleUpdateItem} 
                             onDeleteItem={handleDeleteItem} 
                             onAddTransaction={handleAddTransaction} 
+                            onBulkAddItems={handleBulkAddItems}
                             onAddReseller={handleAddReseller}
                             onInviteReseller={handleInviteReseller}
                             onUpdateReseller={handleUpdateReseller}
@@ -444,6 +469,9 @@ function App() {
                             onAddToCart={handleAddToCart}
                             onQuickBuy={handleQuickBuy}
                             onToggleCart={() => setIsCartOpen(!isCartOpen)}
+                            wishlist={wishlist}
+                            onToggleWishlist={handleToggleWishlist}
+                            onToggleWishlistPanel={() => setIsWishlistOpen(!isWishlistOpen)}
                             onSelectItemDetail={setSelectedItemDetail}
                        />;
         }
@@ -460,6 +488,8 @@ function App() {
                     onClose={() => setSelectedItemDetail(null)}
                     onAddToCart={handleAddToCart}
                     onQuickBuy={handleQuickBuy}
+                    wishlist={wishlist}
+                    onToggleWishlist={handleToggleWishlist}
                 />
             )}
             <Cart 
@@ -481,6 +511,14 @@ function App() {
                 setFeedback={showFeedback}
                 view={cartView}
                 onViewChange={setCartView}
+            />
+            <Wishlist
+                isOpen={isWishlistOpen}
+                onClose={() => setIsWishlistOpen(false)}
+                wishlist={wishlist}
+                items={items}
+                onToggleWishlist={handleToggleWishlist}
+                onAddToCart={handleAddToCart}
             />
              {/* Mobile Bottom Navigation */}
             <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t dark:border-gray-700 shadow-[0_-2px_5px_rgba(0,0,0,0.1)] flex justify-around z-40">

@@ -32,6 +32,19 @@ const Reports: React.FC<ReportsProps> = ({ items, transactions, resellers }) => 
     const totalOut = transactions
         .filter(t => t.type === TransactionType.OUT)
         .reduce((sum, t) => sum + t.quantity, 0);
+        
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    thirtyDaysAgo.setHours(0, 0, 0, 0);
+
+    const totalRevenueLast30Days = transactions
+        .filter(t => t.type === TransactionType.OUT && new Date(t.date) >= thirtyDaysAgo)
+        .reduce((sum, t) => {
+            const item = items.find(i => i.id === t.itemId);
+            if (!item) return sum;
+            const price = parsePrice(item.price);
+            return sum + (price * t.quantity);
+        }, 0);
 
     const popularItems = [...items].sort((a, b) => {
         const salesA = transactions.filter(t => t.itemId === a.id && t.type === TransactionType.OUT).reduce((sum, t) => sum + t.quantity, 0);
@@ -115,7 +128,7 @@ const Reports: React.FC<ReportsProps> = ({ items, transactions, resellers }) => 
             <p class="text-sm text-gray-500 mt-1">Dibuat pada: ${reportDate}</p>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             ${card('Ringkasan Transaksi', `
                 <div class="space-y-2">
                     <div class="flex justify-between">
@@ -127,6 +140,11 @@ const Reports: React.FC<ReportsProps> = ({ items, transactions, resellers }) => 
                         <span class="font-bold text-red-600">${totalOut}</span>
                     </div>
                 </div>
+            `)}
+             ${card('Total Pendapatan (30 Hari)', `
+                <p class="text-3xl font-bold text-green-600">
+                    Rp ${totalRevenueLast30Days.toLocaleString('id-ID')}
+                </p>
             `)}
              ${card('Item Terlaris', popularItemsWithSales.length > 0 ? `
                 <ul class="divide-y divide-gray-200">
@@ -196,8 +214,8 @@ const Reports: React.FC<ReportsProps> = ({ items, transactions, resellers }) => 
             </div>
              <h2 className="text-3xl font-bold text-gray-800 dark:text-white print:text-black hidden print:block mb-4">Laporan Penjualan</h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                 <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg print:shadow-none print:border print:border-gray-300 md:col-span-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                 <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg print:shadow-none print:border print:border-gray-300">
                     <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-4 print:text-black">Ringkasan Transaksi</h3>
                     <div className="space-y-2">
                         <div className="flex justify-between">
@@ -211,7 +229,14 @@ const Reports: React.FC<ReportsProps> = ({ items, transactions, resellers }) => 
                     </div>
                 </div>
 
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg print:shadow-none print:border print:border-gray-300 md:col-span-1">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg print:shadow-none print:border print:border-gray-300">
+                    <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-4 print:text-black">Total Pendapatan (30 Hari)</h3>
+                    <p className="text-3xl font-bold text-green-500 print:text-black">
+                        Rp {totalRevenueLast30Days.toLocaleString('id-ID')}
+                    </p>
+                </div>
+
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg print:shadow-none print:border print:border-gray-300">
                     <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-4 print:text-black">Item Terlaris</h3>
                     {popularItems.length > 0 ? (
                         <ul className="divide-y divide-gray-200 dark:divide-gray-700 print:divide-gray-300">
@@ -234,7 +259,7 @@ const Reports: React.FC<ReportsProps> = ({ items, transactions, resellers }) => 
                     )}
                 </div>
                 
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg print:shadow-none print:border print:border-gray-300 md:col-span-1">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg print:shadow-none print:border print:border-gray-300">
                     <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-4 print:text-black">Reseller Teratas</h3>
                     {topResellers.length > 0 ? (
                         <ul className="divide-y divide-gray-200 dark:divide-gray-700 print:divide-gray-300">

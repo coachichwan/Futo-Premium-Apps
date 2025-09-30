@@ -22,6 +22,7 @@ interface StockManagementProps {
     onUpdateItem: (updatedItem: Item) => void;
     onDeleteItem: (itemId: number) => void;
     onAddTransaction: (transactionData: Omit<Transaction, 'id'>) => void;
+    onBulkAddItems: (newItems: Omit<Item, 'id'>[]) => void;
     onAddReseller: (resellerData: Omit<Reseller, 'id' | 'joinDate' | 'status'>) => void;
     onInviteReseller: (inviteData: { name: string; email: string; commissionRate: number; inviteCode: string }) => void;
     onUpdateReseller: (updatedReseller: Reseller) => void;
@@ -242,9 +243,9 @@ const StockManagement: React.FC<StockManagementProps> = (props) => {
     const renderView = () => {
         switch (activeView) {
             case 'dashboard':
-                return <Dashboard items={props.items} transactions={props.transactions} />;
+                return <Dashboard items={props.items} transactions={props.transactions} resellers={props.resellers} />;
             case 'items':
-                return <ManageItems items={props.items} onAddItem={props.onAddItem} onUpdateItem={props.onUpdateItem} onDeleteItem={props.onDeleteItem} />;
+                return <ManageItems items={props.items} onAddItem={props.onAddItem} onUpdateItem={props.onUpdateItem} onDeleteItem={props.onDeleteItem} onBulkAddItems={props.onBulkAddItems} setFeedback={props.setFeedback} />;
             case 'transactions':
                 return <Transactions items={props.items} resellers={props.resellers} onAddTransaction={props.onAddTransaction} />;
             case 'resellers':
@@ -262,7 +263,7 @@ const StockManagement: React.FC<StockManagementProps> = (props) => {
             case 'reports':
                 return <Reports items={props.items} transactions={props.transactions} resellers={props.resellers} />;
             default:
-                return <Dashboard items={props.items} transactions={props.transactions} />;
+                return <Dashboard items={props.items} transactions={props.transactions} resellers={props.resellers} />;
         }
     };
 

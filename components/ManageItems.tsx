@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { GoogleGenAI } from "@google/genai";
-import { Item, StockLevelStatus, AlertConfigType, AlertConfig } from '../types';
-import { PlusIcon, SaveIcon, WarningIcon, SparklesIcon, BoxIcon } from './Icons';
+import { Item, StockLevelStatus, AlertConfigType, FeedbackMessage } from '../types';
+import { PlusIcon, SaveIcon, WarningIcon, SparklesIcon, BoxIcon, DocumentArrowUpIcon } from './Icons';
 import Tooltip from './Tooltip';
 
 interface ManageItemsProps {
@@ -9,6 +9,8 @@ interface ManageItemsProps {
     onAddItem: (itemData: Omit<Item, 'id'>) => void;
     onUpdateItem: (updatedItem: Item) => void;
     onDeleteItem: (itemId: number) => void;
+    onBulkAddItems: (items: Omit<Item, 'id'>[]) => void;
+    setFeedback: (feedback: FeedbackMessage | null) => void;
 }
 
 // Gemini API Key from environment variables
@@ -81,9 +83,10 @@ const statusSortOrder: Record<StockLevelStatus, number> = {
 };
 
 
-const ManageItems: React.FC<ManageItemsProps> = ({ items, onAddItem, onUpdateItem, onDeleteItem }) => {
+const ManageItems: React.FC<ManageItemsProps> = ({ items, onAddItem, onUpdateItem, onDeleteItem, onBulkAddItems, setFeedback }) => {
     const [isAdding, setIsAdding] = useState(false);
     const [editingItem, setEditingItem] = useState<Item | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const initialFormState: Omit<Item, 'id'> = {
         name: '',
         unit: 'Akun',
@@ -204,6 +207,100 @@ const ManageItems: React.FC<ManageItemsProps> = ({ items, onAddItem, onUpdateIte
     const startEditing = (item: Item) => {
         setEditingItem({ ...item });
         setIsAdding(false);
+    };
+
+    const handleImportClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const text = e.target?.result as string;
+            if (text) {
+                parseAndImportCSV(text);
+            }
+        };
+        reader.readAsText(file);
+        // Reset file input to allow re-uploading the same file
+        event.target.value = '';
+    };
+
+    const parseAndImportCSV = (csvText: string) => {
+        const lines = csvText.trim().split(/\r?\n/);
+        if (lines.length < 2) {
+            setFeedback({ message: 'File CSV kosong atau hanya berisi header.', type: 'error' });
+            return;
+        }
+    
+        const headers = lines[0].split(',').map(h => h.trim());
+        const requiredHeaders = ['name', 'category', 'groupName', 'planName', 'price'];
+        for (const required of requiredHeaders) {
+            if (!headers.includes(required)) {
+                setFeedback({ message: `Header CSV yang wajib ada '${required}' tidak ditemukan.`, type: 'error' });
+                return;
+            }
+        }
+    
+        const newItems: Omit<Item, 'id'>[] = [];
+        let errorCount = 0;
+    
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i];
+            if (!line.trim()) continue;
+    
+            const values = (line.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g) || []).map(v => v.trim().replace(/^"|"$/g, ''));
+    
+            const rowObject = headers.reduce((obj, header, index) => {
+                obj[header] = values[index] || '';
+                return obj;
+            }, {} as Record<string, string>);
+    
+            if (!rowObject.name || !rowObject.category || !rowObject.groupName || !rowObject.planName || !rowObject.price) {
+                errorCount++;
+                continue;
+            }
+    
+            const newItem: Omit<Item, 'id'> = {
+                name: rowObject.name,
+                unit: rowObject.unit || 'Unit',
+                minStock: parseInt(rowObject.minStock, 10) || 0,
+                currentStock: parseInt(rowObject.currentStock, 10) || 0,
+                description: rowObject.description || '',
+                alertConfig: { type: AlertConfigType.DEFAULT, value: 0 },
+                icon: '',
+                category: rowObject.category,
+                groupName: rowObject.groupName,
+                planName: rowObject.planName,
+                price: rowObject.price,
+                warranty: rowObject.warranty || 'Garansi 1 Bulan',
+                features: rowObject.features ? rowObject.features.split(';').map(f => f.trim()) : [],
+                isVisibleInStore: !['false', '0', 'no'].includes(rowObject.isVisibleInStore?.toLowerCase()),
+                orderLink: rowObject.orderLink || '',
+                testimonials: [],
+            };
+    
+            newItems.push(newItem);
+        }
+    
+        if (newItems.length > 0) {
+            onBulkAddItems(newItems);
+        }
+    
+        let message = '';
+        if (newItems.length > 0) {
+            message += `${newItems.length} item berhasil diimpor. `;
+        }
+        if (errorCount > 0) {
+            message += `${errorCount} baris diabaikan karena data tidak lengkap.`;
+        }
+    
+        if (message) {
+            setFeedback({ message, type: newItems.length > 0 ? 'success' : 'error' });
+        }
     };
 
     const processedItems = useMemo(() => {
@@ -357,16 +454,36 @@ const ManageItems: React.FC<ManageItemsProps> = ({ items, onAddItem, onUpdateIte
         }
     };
 
+    const csvTemplateHeaders = 'name,unit,minStock,currentStock,description,category,groupName,planName,price,warranty,features,isVisibleInStore,orderLink';
+    const csvTemplateData = '"Netflix - Private","Akun",5,10,"Akun private, kualitas 4K UHD+HDR","Akun Streaming","Netflix","Private","120k","Garansi 1 Bulan","Private account;Kualitas 4K UHD+HDR",TRUE,https://wa.me/yournumber';
+    const csvTemplate = `${csvTemplateHeaders}\n${csvTemplateData}`;
+    const csvDataUri = `data:text/csv;charset=utf-8,${encodeURIComponent(csvTemplate)}`;
+
+
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-wrap gap-4 justify-between items-center">
                 <h2 className="text-3xl font-bold text-gray-800 dark:text-white">Kelola Item</h2>
                 {!isAdding && !editingItem && (
-                    <Tooltip text="Buka form untuk menambah item baru">
-                        <button onClick={() => { setIsAdding(true); setEditingItem(null); setFormState(initialFormState); }} className="px-4 py-2 bg-cyan-500 text-white rounded-lg flex items-center">
-                            <PlusIcon className="h-5 w-5 mr-2" /> Tambah Item Baru
-                        </button>
-                    </Tooltip>
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                            accept=".csv"
+                            className="hidden"
+                        />
+                        <Tooltip text="Impor item secara massal dari file CSV">
+                            <button onClick={handleImportClick} className="px-4 py-2 bg-green-500 text-white rounded-lg flex items-center">
+                                <DocumentArrowUpIcon className="h-5 w-5 mr-2" /> Import
+                            </button>
+                        </Tooltip>
+                        <Tooltip text="Buka form untuk menambah item baru">
+                            <button onClick={() => { setIsAdding(true); setEditingItem(null); setFormState(initialFormState); }} className="px-4 py-2 bg-cyan-500 text-white rounded-lg flex items-center">
+                                <PlusIcon className="h-5 w-5 mr-2" /> Tambah Item
+                            </button>
+                        </Tooltip>
+                    </div>
                 )}
             </div>
 
@@ -400,6 +517,14 @@ const ManageItems: React.FC<ManageItemsProps> = ({ items, onAddItem, onUpdateIte
                             ))}
                         </select>
                      </div>
+                </div>
+                <div className="text-right mt-2">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Butuh impor massal?
+                        <a href={csvDataUri} download="template_import_item.csv" className="text-cyan-600 hover:underline ml-1 font-semibold">
+                            Download template CSV
+                        </a>
+                    </p>
                 </div>
             </div>
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { Item } from '../types';
-import { XIcon, CheckmarkIcon, ShoppingCartIcon, ArrowRightIcon, QuoteIcon, SparklesIcon } from './Icons';
+import { XIcon, CheckmarkIcon, ShoppingCartIcon, ArrowRightIcon, QuoteIcon, SparklesIcon, HeartIcon } from './Icons';
 
 // Gemini API Key from environment variables
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -19,15 +19,18 @@ interface ProductDetailViewProps {
     onClose: () => void;
     onAddToCart: (itemId: number) => void;
     onQuickBuy: (itemId: number) => void;
+    wishlist: number[];
+    onToggleWishlist: (itemId: number) => void;
 }
 
-const ProductDetailView: React.FC<ProductDetailViewProps> = ({ item, onClose, onAddToCart, onQuickBuy }) => {
+const ProductDetailView: React.FC<ProductDetailViewProps> = ({ item, onClose, onAddToCart, onQuickBuy, wishlist, onToggleWishlist }) => {
     const [selectedFeature, setSelectedFeature] = useState<string | null>(null);
     const [featureDescription, setFeatureDescription] = useState<string>('');
     const [isLoadingDescription, setIsLoadingDescription] = useState(false);
 
     const isOutOfStock = item.currentStock <= 0;
     const isLowStock = !isOutOfStock && item.currentStock <= item.minStock;
+    const isWishlisted = wishlist.includes(item.id);
 
     const handleFeatureClick = async (feature: string) => {
         setSelectedFeature(feature);
@@ -196,20 +199,29 @@ const ProductDetailView: React.FC<ProductDetailViewProps> = ({ item, onClose, on
                             Stok Habis
                         </button>
                     ) : (
-                        <div className="grid grid-cols-2 gap-3">
-                            <button 
-                                onClick={() => onAddToCart(item.id)}
-                                className="w-full bg-cyan-100 dark:bg-cyan-900/50 text-cyan-600 dark:text-cyan-400 font-semibold py-3 rounded-lg hover:bg-cyan-200 dark:hover:bg-cyan-900/80 transition-colors flex items-center justify-center gap-2"
-                            >
-                                <ShoppingCartIcon className="h-5 w-5" />
-                                Tambah Keranjang
-                            </button>
+                        <div className="flex gap-3">
+                            <div className="grid grid-cols-2 gap-3 flex-grow">
+                                <button 
+                                    onClick={() => onAddToCart(item.id)}
+                                    className="w-full bg-cyan-100 dark:bg-cyan-900/50 text-cyan-600 dark:text-cyan-400 font-semibold py-3 rounded-lg hover:bg-cyan-200 dark:hover:bg-cyan-900/80 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <ShoppingCartIcon className="h-5 w-5" />
+                                    Tambah Keranjang
+                                </button>
+                                 <button 
+                                    onClick={() => onQuickBuy(item.id)}
+                                    className="w-full bg-cyan-500 text-white font-semibold py-3 rounded-lg hover:bg-cyan-600 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    Beli Sekarang
+                                    <ArrowRightIcon className="h-4 w-4" />
+                                </button>
+                            </div>
                              <button 
-                                onClick={() => onQuickBuy(item.id)}
-                                className="w-full bg-cyan-500 text-white font-semibold py-3 rounded-lg hover:bg-cyan-600 transition-colors flex items-center justify-center gap-2"
+                                onClick={() => onToggleWishlist(item.id)}
+                                className="w-14 h-auto flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors flex-shrink-0"
+                                aria-label={isWishlisted ? "Hapus dari wishlist" : "Tambah ke wishlist"}
                             >
-                                Beli Sekarang
-                                <ArrowRightIcon className="h-4 w-4" />
+                                <HeartIcon className={`h-6 w-6 ${isWishlisted ? 'text-red-500 fill-current' : 'text-gray-400'}`} />
                             </button>
                         </div>
                     )}

@@ -1,23 +1,29 @@
 {
-  "name": "futo-premium-store-&-inventory",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "name": "futo-premium-store",
+  "version": "1.0.0",
+  "description": "A dual-function application featuring a digital catalog for premium licenses and a comprehensive inventory management system to track stock.",
+  "main": "index.tsx",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "test": "jest"
   },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
   "dependencies": {
+    "@google/genai": "^0.14.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "@google/genai": "^0.14.0",
     "recharts": "^2.12.7"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
-    "@vitejs/plugin-react": "^5.0.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "@testing-library/jest-dom": "^6.4.6",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/jest": "^29.5.12",
+    "@types/react": "^18.3.3",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "ts-jest": "^29.1.5",
+    "typescript": "^5.5.2"
   }
 }

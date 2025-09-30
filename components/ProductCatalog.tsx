@@ -6,7 +6,7 @@ import {
     CapcutIcon, CanvaIcon, ChatGPTIcon, GameControllerIcon, BriefcaseIcon,
     PriceTagIcon, CalculatorIcon, ShoppingCartIcon, CheckmarkIcon, WhatsAppIcon,
     StoreIcon, SparklesIcon, BellIcon, ChevronDownIcon, ChevronUpIcon, ArrowRightIcon,
-    MenuIcon, XIcon, TrophyIcon, UserGroupIcon
+    MenuIcon, XIcon, TrophyIcon, UserGroupIcon, HeartIcon
 } from './Icons';
 import { ThemeToggle } from './ThemeToggle';
 import SuggestionBox from './SuggestionBox';
@@ -16,6 +16,17 @@ type CartItem = { itemId: number; quantity: number };
 
 // Gemini API Key from environment variables
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+// Helper to convert price string (e.g., "120k") to a number
+const parsePrice = (priceStr: string): number => {
+    if (!priceStr) return 0;
+    const numericString = priceStr.replace(/[^0-9]/g, '');
+    let value = parseInt(numericString, 10);
+    if (priceStr.toLowerCase().includes('k')) {
+        value *= 1000;
+    }
+    return isNaN(value) ? 0 : value;
+};
 
 // Helper function to get the numeric threshold for an alert
 const getAlertThreshold = (item: Item): number | null => {
@@ -70,13 +81,21 @@ const productIconMap: Record<string, React.FC<any>> = {
 };
 
 
-const ProductPlanCard: React.FC<{ plan: Item; onAddToCart: (itemId: number) => void; onQuickBuy: (itemId: number) => void; onSelectItemDetail: (item: Item) => void; onExplainFeature: (feature: string) => void; }> = ({ plan, onAddToCart, onQuickBuy, onSelectItemDetail, onExplainFeature }) => {
+const ProductPlanCard: React.FC<{ plan: Item; onAddToCart: (itemId: number) => void; onQuickBuy: (itemId: number) => void; onSelectItemDetail: (item: Item) => void; onExplainFeature: (feature: string) => void; wishlist: number[]; onToggleWishlist: (itemId: number) => void; }> = ({ plan, onAddToCart, onQuickBuy, onSelectItemDetail, onExplainFeature, wishlist, onToggleWishlist }) => {
     const isOutOfStock = plan.currentStock <= 0;
     const isLowStock = !isOutOfStock && plan.currentStock <= plan.minStock;
     const alertText = getAlertThresholdText(plan);
+    const isWishlisted = wishlist.includes(plan.id);
     
     return (
-        <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 flex flex-col h-full border border-gray-200 dark:border-gray-700 hover:border-cyan-500 dark:hover:border-cyan-500 transition-all transform hover:-translate-y-1 ${isOutOfStock ? 'opacity-60 grayscale' : ''}`}>
+        <div className={`relative bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 flex flex-col h-full border border-gray-200 dark:border-gray-700 hover:border-cyan-500 dark:hover:border-cyan-500 transition-all transform hover:-translate-y-1 ${isOutOfStock ? 'opacity-60 grayscale' : ''}`}>
+             <button 
+                onClick={(e) => { e.stopPropagation(); onToggleWishlist(plan.id); }}
+                className="absolute top-3 right-3 p-2 rounded-full bg-white/50 dark:bg-gray-900/50 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors z-10"
+                aria-label={isWishlisted ? "Hapus dari wishlist" : "Tambah ke wishlist"}
+            >
+                <HeartIcon className={`h-6 w-6 ${isWishlisted ? 'text-red-500 fill-current' : 'text-gray-400'}`} />
+            </button>
             <div onClick={() => onSelectItemDetail(plan)} className="cursor-pointer flex-grow flex flex-col">
                 <h4 className="text-xl font-bold text-gray-800 dark:text-white">{plan.planName}</h4>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{plan.warranty}</p>
@@ -132,7 +151,7 @@ const ProductPlanCard: React.FC<{ plan: Item; onAddToCart: (itemId: number) => v
     );
 };
 
-const ProductCard: React.FC<{ groupName: string; plans: Item[], onAddToCart: (itemId: number) => void; onQuickBuy: (itemId: number) => void; onSelectItemDetail: (item: Item) => void; onExplainFeature: (feature: string) => void; }> = ({ groupName, plans, onAddToCart, onQuickBuy, onSelectItemDetail, onExplainFeature }) => {
+const ProductCard: React.FC<{ groupName: string; plans: Item[], onAddToCart: (itemId: number) => void; onQuickBuy: (itemId: number) => void; onSelectItemDetail: (item: Item) => void; onExplainFeature: (feature: string) => void; wishlist: number[]; onToggleWishlist: (itemId: number) => void; }> = ({ groupName, plans, onAddToCart, onQuickBuy, onSelectItemDetail, onExplainFeature, wishlist, onToggleWishlist }) => {
     const [isOpen, setIsOpen] = useState(true); // Default to open
     const firstPlan = plans[0];
     const ProductIcon = productIconMap[groupName] || categoryInfo[firstPlan.category]?.defaultProductIcon || SparklesIcon;
@@ -159,7 +178,7 @@ const ProductCard: React.FC<{ groupName: string; plans: Item[], onAddToCart: (it
             {isOpen && (
                 <div className="p-8 pt-0">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {plans.map(plan => <ProductPlanCard key={plan.id} plan={plan} onAddToCart={onAddToCart} onQuickBuy={onQuickBuy} onSelectItemDetail={onSelectItemDetail} onExplainFeature={onExplainFeature}/>)}
+                        {plans.map(plan => <ProductPlanCard key={plan.id} plan={plan} onAddToCart={onAddToCart} onQuickBuy={onQuickBuy} onSelectItemDetail={onSelectItemDetail} onExplainFeature={onExplainFeature} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}
                     </div>
                 </div>
             )}
@@ -167,7 +186,7 @@ const ProductCard: React.FC<{ groupName: string; plans: Item[], onAddToCart: (it
     );
 }
 
-const CategorySection: React.FC<{ category: string; groups: Item[][]; onAddToCart: (itemId: number) => void; onQuickBuy: (itemId: number) => void; onSelectItemDetail: (item: Item) => void; onExplainFeature: (feature: string) => void; defaultOpen?: boolean }> = ({ category, groups, onAddToCart, onQuickBuy, onSelectItemDetail, onExplainFeature, defaultOpen = false }) => {
+const CategorySection: React.FC<{ category: string; groups: Item[][]; onAddToCart: (itemId: number) => void; onQuickBuy: (itemId: number) => void; onSelectItemDetail: (item: Item) => void; onExplainFeature: (feature: string) => void; wishlist: number[]; onToggleWishlist: (itemId: number) => void; defaultOpen?: boolean }> = ({ category, groups, onAddToCart, onQuickBuy, onSelectItemDetail, onExplainFeature, wishlist, onToggleWishlist, defaultOpen = false }) => {
     const [isOpen, setIsOpen] = useState(defaultOpen);
     const info = categoryInfo[category] || categoryInfo['Lain-lain'];
     const CategoryIcon = info.icon;
@@ -191,7 +210,7 @@ const CategorySection: React.FC<{ category: string; groups: Item[][]; onAddToCar
             {isOpen && (
                  <div className="p-6 pt-0 space-y-8">
                     {groups.map(plans => (
-                        <ProductCard key={plans[0].groupName} groupName={plans[0].groupName} plans={plans} onAddToCart={onAddToCart} onQuickBuy={onQuickBuy} onSelectItemDetail={onSelectItemDetail} onExplainFeature={onExplainFeature}/>
+                        <ProductCard key={plans[0].groupName} groupName={plans[0].groupName} plans={plans} onAddToCart={onAddToCart} onQuickBuy={onQuickBuy} onSelectItemDetail={onSelectItemDetail} onExplainFeature={onExplainFeature} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />
                     ))}
                 </div>
             )}
@@ -219,6 +238,9 @@ interface ProductCatalogProps {
     onAddToCart: (itemId: number) => void;
     onQuickBuy: (itemId: number) => void;
     onToggleCart: () => void;
+    wishlist: number[];
+    onToggleWishlist: (itemId: number) => void;
+    onToggleWishlistPanel: () => void;
     onSelectItemDetail: (item: Item) => void;
 }
 
@@ -242,6 +264,9 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
     onAddToCart,
     onQuickBuy,
     onToggleCart,
+    wishlist,
+    onToggleWishlist,
+    onToggleWishlistPanel,
     onSelectItemDetail,
 }) => {
     const [isSuggestionBoxOpen, setIsSuggestionBoxOpen] = useState(false);
@@ -251,6 +276,7 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isDesktopMenuOpen, setIsDesktopMenuOpen] = useState(false);
     const [explainingFeature, setExplainingFeature] = useState<{ feature: string; description: string; isLoading: boolean } | null>(null);
+    const [sortOption, setSortOption] = useState('default');
 
 
     const handleExplainFeature = async (feature: string) => {
@@ -274,6 +300,7 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
 
     const unreadCount = userNotifications.filter(n => !n.read).length;
     const cartItemCount = cart.reduce((total, item) => total + item.quantity, 0);
+    const wishlistItemCount = wishlist.length;
 
     const { categories, groupedData } = useMemo(() => {
         const visibleItems = items.filter(item => 
@@ -297,11 +324,35 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
                 (acc[item.groupName] = acc[item.groupName] || []).push(item);
                 return acc;
             }, {} as Record<string, Item[]>);
+            
+            // Apply sorting to plans within each group
+            Object.values(itemsByGroup).forEach(plans => {
+                plans.sort((a, b) => {
+                    switch (sortOption) {
+                        case 'name-asc':
+                            return a.planName.localeCompare(b.planName);
+                        case 'name-desc':
+                            return b.planName.localeCompare(a.planName);
+                        case 'price-asc':
+                            return parsePrice(a.price) - parsePrice(b.price);
+                        case 'price-desc':
+                            return parsePrice(b.price) - parsePrice(a.price);
+                        case 'stock-desc':
+                            return b.currentStock - a.currentStock;
+                        case 'stock-asc':
+                            return a.currentStock - b.currentStock;
+                        case 'default':
+                        default:
+                            return 0; // Keep original order
+                    }
+                });
+            });
+
             return { category, groups: Object.values(itemsByGroup) };
         });
 
         return { categories: allCategories, groupedData: data };
-    }, [items, searchTerm, activeCategory]);
+    }, [items, searchTerm, activeCategory, sortOption]);
 
     const topResellers = useMemo(() => {
         return resellers
@@ -371,6 +422,14 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
                                 onDelete={onDeleteUserNotification}
                             />
                         </div>
+                        <button onClick={onToggleWishlistPanel} className="relative p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white rounded-full">
+                            <HeartIcon className="h-6 w-6"/>
+                            {wishlistItemCount > 0 && (
+                                <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                                    {wishlistItemCount}
+                                </span>
+                            )}
+                        </button>
                         <button onClick={onToggleCart} className="relative p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white rounded-full">
                             <ShoppingCartIcon className="h-6 w-6"/>
                              {cartItemCount > 0 && (
@@ -464,7 +523,7 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
 
                 {/* Search and Filter */}
                 <div className="mb-10 p-4 bg-white dark:bg-gray-800 rounded-xl shadow-md sticky top-[70px] z-30">
-                    <div className="flex flex-col md:flex-row gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <input
                             type="text"
                             placeholder="Cari produk favoritmu..."
@@ -472,6 +531,20 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-cyan-500 outline-none transition"
                         />
+                         <select
+                            aria-label="Sort products"
+                            value={sortOption}
+                            onChange={(e) => setSortOption(e.target.value)}
+                            className="w-full p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-cyan-500 outline-none transition"
+                        >
+                            <option value="default">Urutkan Berdasarkan...</option>
+                            <option value="name-asc">Nama (A-Z)</option>
+                            <option value="name-desc">Nama (Z-A)</option>
+                            <option value="price-asc">Harga (Rendah ke Tinggi)</option>
+                            <option value="price-desc">Harga (Tinggi ke Rendah)</option>
+                            <option value="stock-desc">Stok (Banyak ke Sedikit)</option>
+                            <option value="stock-asc">Stok (Sedikit ke Banyak)</option>
+                        </select>
                     </div>
                     <div className="mt-4 flex flex-wrap gap-2">
                         {categories.map(cat => (
@@ -503,6 +576,8 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
                                 onSelectItemDetail={onSelectItemDetail}
                                 onExplainFeature={handleExplainFeature}
                                 defaultOpen={true} // Keep all open for easier browsing
+                                wishlist={wishlist}
+                                onToggleWishlist={onToggleWishlist}
                             />
                         ))
                     ) : (
