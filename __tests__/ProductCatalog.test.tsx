@@ -98,7 +98,7 @@ describe('ProductCatalog', () => {
     const user = userEvent.setup();
     renderComponent();
 
-    const categoryButton = screen.getByRole('button', { name: 'Lisensi Produktivitas' });
+    const categoryButton = screen.getByRole('button', { name: /Lisensi Produktivitas/ });
     await user.click(categoryButton);
 
     expect(screen.queryByText('Akun Streaming')).not.toBeInTheDocument();
@@ -136,7 +136,7 @@ describe('ProductCatalog', () => {
     const quickBuyButton = screen.getAllByRole('button', { name: /Beli Cepat/i })[0];
     await user.click(quickBuyButton);
 
-    expect(mockHandlers.onQuickBuy).toHaveBeenCalledWith(1);
+    expect(mockHandlers.onQuickBuy).toHaveBeenCalledWith(mockItems[0]);
   });
 
   it('calls onToggleWishlist when wishlist icon is clicked', async () => {

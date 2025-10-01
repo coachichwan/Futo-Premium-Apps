@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Item, Transaction, TransactionType, FeedbackMessage, Suggestion, UserNotification, AlertConfigType, Reseller } from './types';
+import { Item, Transaction, TransactionType, FeedbackMessage, Suggestion, UserNotification, AlertConfigType, Reseller, Discount } from './types';
 import StockManagement from './components/StockManagement';
 import ProductCatalog from './components/ProductCatalog';
 import ResellerGuide from './components/ResellerGuide';
@@ -8,6 +8,7 @@ import { NotificationProvider } from './contexts/NotificationContext';
 import Cart from './components/Cart';
 import Wishlist from './components/Wishlist';
 import ProductDetailView from './components/ProductDetailView';
+import BundleBuilder from './components/BundleBuilder';
 import { StoreIcon, DashboardIcon, UserGroupIcon, CalculatorIcon } from './components/Icons';
 
 
@@ -48,70 +49,70 @@ const defaultAlertConfig = { type: AlertConfigType.DEFAULT, value: 0 };
 const initialItems: Item[] = [
     // Disney+
     { id: 1, name: 'Disney+ - Premium Private', unit: 'Akun', minStock: 5, currentStock: 15, description: 'Akun pribadi, bisa untuk semua device, kualitas 4K UHD.', alertConfig: defaultAlertConfig, icon: '',
-        category: 'Akun Streaming', groupName: 'Disney+ Hotstar', planName: 'Premium Private', price: '25k', warranty: 'Garansi 1 Bulan', features: ['Akun pribadi (1 user)', 'Kualitas 4K UHD', 'Bisa di semua device'], isVisibleInStore: true, orderLink: 'https://wa.me/6285779462118?text=Halo,%20saya%20mau%20pesan%20Disney+'
+        category: 'Akun Streaming', groupName: 'Disney+ Hotstar', planName: 'Premium Private', price: '25k', warranty: 'Garansi 1 Bulan', features: ['Akun pribadi (1 user)', 'Kualitas 4K UHD', 'Bisa di semua device'], isVisibleInStore: true
     },
     { id: 2, name: 'Disney+ - Sharing', unit: 'Akun', minStock: 10, currentStock: 25, description: 'Akun sharing, login di 1 device, kualitas 4K UHD.', alertConfig: defaultAlertConfig, icon: '',
-        category: 'Akun Streaming', groupName: 'Disney+ Hotstar', planName: 'Sharing', price: '10k', warranty: 'Garansi 1 Bulan', features: ['Akun sharing (maks. 5 user)', 'Kualitas 4K UHD', 'Login di 1 device'], isVisibleInStore: true, orderLink: 'https://wa.me/6285779462118?text=Halo,%20saya%20mau%20pesan%20Disney+'
+        category: 'Akun Streaming', groupName: 'Disney+ Hotstar', planName: 'Sharing', price: '10k', warranty: 'Garansi 1 Bulan', features: ['Akun sharing (maks. 5 user)', 'Kualitas 4K UHD', 'Login di 1 device'], isVisibleInStore: true
     },
     // Netflix
     { id: 3, name: 'Netflix - Private', unit: 'Akun', minStock: 5, currentStock: 8, description: 'Akun private, kualitas 4K UHD+HDR, bisa di semua device.', alertConfig: defaultAlertConfig, icon: '',
-        category: 'Akun Streaming', groupName: 'Netflix', planName: 'Private', price: '120k', warranty: 'Garansi 1 Bulan', features: ['Private account', 'Kualitas 4K UHD+HDR', 'Bisa di semua device'], isVisibleInStore: true, orderLink: 'https://wa.me/6285779462118?text=Halo,%20saya%20mau%20pesan%20Netflix',
+        category: 'Akun Streaming', groupName: 'Netflix', planName: 'Private', price: '120k', warranty: 'Garansi 1 Bulan', features: ['Private account', 'Kualitas 4K UHD+HDR', 'Bisa di semua device'], isVisibleInStore: true,
         testimonials: [
             { author: 'Budi S.', quote: 'Prosesnya cepet banget, adminnya ramah, dan akunnya beneran private. Lancar jaya nonton 4K tanpa buffer. Recommended!' },
             { author: 'Sari W.', quote: 'Udah langganan 3 bulan di sini, gak pernah ada masalah. Kualitasnya UHD beneran, bisa dipakai di Smart TV sama HP. Mantap!' }
         ]
     },
     { id: 4, name: 'Netflix - 1P1U Request Nama & PIN', unit: 'Akun', minStock: 10, currentStock: 18, description: '1 profil untuk 1 user, bisa request nama profil & PIN, kualitas 4K UHD+HDR.', alertConfig: defaultAlertConfig, icon: '',
-        category: 'Akun Streaming', groupName: 'Netflix', planName: '1P1U Request Nama & PIN', price: '45k', warranty: 'Garansi 1 Bulan', features: ['1 profil untuk 1 user', 'Bisa request nama profil & PIN', 'Kualitas 4K UHD+HDR'], isVisibleInStore: true, orderLink: 'https://wa.me/6285779462118?text=Halo,%20saya%20mau%20pesan%20Netflix'
+        category: 'Akun Streaming', groupName: 'Netflix', planName: '1P1U Request Nama & PIN', price: '45k', warranty: 'Garansi 1 Bulan', features: ['1 profil untuk 1 user', 'Bisa request nama profil & PIN', 'Kualitas 4K UHD+HDR'], isVisibleInStore: true
     },
     { id: 5, name: 'Netflix - Sharing', unit: 'Akun', minStock: 15, currentStock: 3, description: '1 akun untuk 10 user, dilarang ganti password, kualitas 4K UHD+HDR.', alertConfig: { type: AlertConfigType.QUANTITY, value: 5 }, icon: '',
-        category: 'Akun Streaming', groupName: 'Netflix', planName: 'Sharing', price: '30k', warranty: 'Garansi 1 Bulan', features: ['1 akun untuk 10 user', 'Dilarang ganti password', 'Kualitas 4K UHD+HDR'], isVisibleInStore: true, orderLink: 'https://wa.me/6285779462118?text=Halo,%20saya%20mau%20pesan%20Netflix'
+        category: 'Akun Streaming', groupName: 'Netflix', planName: 'Sharing', price: '30k', warranty: 'Garansi 1 Bulan', features: ['1 akun untuk 10 user', 'Dilarang ganti password', 'Kualitas 4K UHD+HDR'], isVisibleInStore: true
     },
     // CapCut Pro
     { id: 6, name: 'CapCut Pro - 7 Hari Hemat', unit: 'Lisensi', minStock: 20, currentStock: 50, description: 'Akses 7 hari full premium, tanpa watermark, via join team.', alertConfig: defaultAlertConfig, icon: '',
-        category: 'Lisensi Produktivitas', groupName: 'CapCut Pro', planName: '7 Hari Hemat', price: '5k', warranty: 'Akses 7 hari', features: ['Full premium', 'Tanpa watermark', 'Join team'], isVisibleInStore: true, orderLink: 'https://wa.me/6285779462118?text=Halo,%20saya%20mau%20pesan%20CapCut%20Pro'
+        category: 'Lisensi Produktivitas', groupName: 'CapCut Pro', planName: '7 Hari Hemat', price: '5k', warranty: 'Akses 7 hari', features: ['Full premium', 'Tanpa watermark', 'Join team'], isVisibleInStore: true
     },
     { id: 7, name: 'CapCut Pro - 30 Hari Best Seller', unit: 'Lisensi', minStock: 10, currentStock: 40, description: 'Akses 30 hari, Garansi 7 hari, via join team.', alertConfig: defaultAlertConfig, icon: '',
-        category: 'Lisensi Produktivitas', groupName: 'CapCut Pro', planName: '30 Hari Best Seller', price: '15k', warranty: 'Garansi 7 hari', features: ['Full premium', 'Tanpa watermark', 'Join team'], isVisibleInStore: true, orderLink: 'https://wa.me/6285779462118?text=Halo,%20saya%20mau%20pesan%20CapCut%20Pro',
+        category: 'Lisensi Produktivitas', groupName: 'CapCut Pro', planName: '30 Hari Best Seller', price: '15k', warranty: 'Garansi 7 hari', features: ['Full premium', 'Tanpa watermark', 'Join team'], isVisibleInStore: true,
         testimonials: [
             { author: 'Rian H.', quote: 'Fitur pro-nya kebuka semua, edit video jadi gampang banget tanpa watermark. Harganya juga murah meriah. Puas banget!' },
             { author: 'Dita A.', quote: 'Awalnya ragu, tapi ternyata beneran amanah. Join team-nya gampang, langsung bisa ekspor kualitas tinggi. Makasih Futo!' }
         ]
     },
     { id: 8, name: 'CapCut Pro - 30 Hari Full Garansi', unit: 'Lisensi', minStock: 10, currentStock: 35, description: 'Akses 30 hari, Garansi 25 Hari, via join team.', alertConfig: defaultAlertConfig, icon: '',
-        category: 'Lisensi Produktivitas', groupName: 'CapCut Pro', planName: '30 Hari Full Garansi', price: '20k', warranty: 'Garansi 25 Hari', features: ['Full premium', 'Tanpa watermark', 'Join team'], isVisibleInStore: true, orderLink: 'https://wa.me/6285779462118?text=Halo,%20saya%20mau%20pesan%20CapCut%20Pro'
+        category: 'Lisensi Produktivitas', groupName: 'CapCut Pro', planName: '30 Hari Full Garansi', price: '20k', warranty: 'Garansi 25 Hari', features: ['Full premium', 'Tanpa watermark', 'Join team'], isVisibleInStore: true
     },
     // Canva
     { id: 9, name: 'Canva - MEMBER + DESIGNER', unit: 'Lisensi', minStock: 10, currentStock: 2, description: 'Desain tanpa batas dengan fitur Pro via invite email.', alertConfig: defaultAlertConfig, icon: '',
-        category: 'Lisensi Produktivitas', groupName: 'Canva Pro', planName: 'MEMBER + DESIGNER', price: '10k', warranty: 'Garansi 1 Bulan', features: ['Via invite email', 'Full Pro features'], isVisibleInStore: true, orderLink: 'https://wa.me/6285779462118?text=Halo,%20saya%20mau%20pesan%20Canva%20Pro'
+        category: 'Lisensi Produktivitas', groupName: 'Canva Pro', planName: 'MEMBER + DESIGNER', price: '10k', warranty: 'Garansi 1 Bulan', features: ['Via invite email', 'Full Pro features'], isVisibleInStore: true
     },
     { id: 10, name: 'Canva - PRO OWNER', unit: 'Lisensi', minStock: 5, currentStock: 12, description: 'Jadi owner tim Canva, bisa invite member, garansi penuh.', alertConfig: defaultAlertConfig, icon: '',
-        category: 'Lisensi Produktivitas', groupName: 'Canva Pro', planName: 'PRO OWNER', price: '25k', warranty: 'Garansi 30 Hari', features: ['Akun owner', 'Bisa invite member', 'Full Pro features'], isVisibleInStore: true, orderLink: 'https://wa.me/6285779462118?text=Halo,%20saya%20mau%20pesan%20Canva%20Pro',
+        category: 'Lisensi Produktivitas', groupName: 'Canva Pro', planName: 'PRO OWNER', price: '25k', warranty: 'Garansi 30 Hari', features: ['Akun owner', 'Bisa invite member', 'Full Pro features'], isVisibleInStore: true,
          testimonials: [
             { author: 'Andika P.', quote: 'Gila sih, dengan harga segini bisa jadi owner tim. Invite teman-teman jadi gampang, fitur pro-nya lengkap pol. Wajib coba buat yang sering desain.' }
         ]
     },
     // ChatGPT
     { id: 11, name: 'ChatGPT - TEAM FAMPLAN', unit: 'Lisensi', minStock: 8, currentStock: 15, description: 'Akses model GPT-4o dengan limit lebih tinggi via invite email.', alertConfig: defaultAlertConfig, icon: '',
-        category: 'Lisensi Produktivitas', groupName: 'ChatGPT Plus', planName: 'TEAM FAMPLAN', price: '80k', warranty: 'Garansi 1 Bulan', features: ['Via invite email', 'Akses GPT-4o', 'Limit lebih tinggi'], isVisibleInStore: true, orderLink: 'https://wa.me/6285779462118?text=Halo,%20saya%20mau%20pesan%20ChatGPT%20Plus'
+        category: 'Lisensi Produktivitas', groupName: 'ChatGPT Plus', planName: 'TEAM FAMPLAN', price: '80k', warranty: 'Garansi 1 Bulan', features: ['Via invite email', 'Akses GPT-4o', 'Limit lebih tinggi'], isVisibleInStore: true
     },
     { id: 12, name: 'ChatGPT - PLUS GARANSI', unit: 'Lisensi', minStock: 5, currentStock: 10, description: 'Akun siap pakai dari seller, akses GPT-4o, garansi penuh.', alertConfig: defaultAlertConfig, icon: '',
-        category: 'Lisensi Produktivitas', groupName: 'ChatGPT Plus', planName: 'PLUS GARANSI', price: '150k', warranty: 'Garansi 1 Bulan', features: ['Akun dari seller', 'Akses GPT-4o', 'Full garansi'], isVisibleInStore: true, orderLink: 'https://wa.me/6285779462118?text=Halo,%20saya%20mau%20pesan%20ChatGPT%20Plus'
+        category: 'Lisensi Produktivitas', groupName: 'ChatGPT Plus', planName: 'PLUS GARANSI', price: '150k', warranty: 'Garansi 1 Bulan', features: ['Akun dari seller', 'Akses GPT-4o', 'Full garansi'], isVisibleInStore: true
     },
     // YouTube
     { id: 13, name: 'YouTube - 1 Bulan Via Invite', unit: 'Lisensi', minStock: 15, currentStock: 28, description: 'Nonton tanpa iklan, termasuk YouTube Music, via invite family.', alertConfig: defaultAlertConfig, icon: '',
-        category: 'Akun Streaming', groupName: 'YouTube Premium', planName: '1 Bulan Via Invite', price: '15k', warranty: 'Garansi 1 Bulan', features: ['Via invite family', 'Termasuk YouTube Music'], isVisibleInStore: true, orderLink: 'https://wa.me/6285779462118?text=Halo,%20saya%20mau%20pesan%20YouTube%20Premium'
+        category: 'Akun Streaming', groupName: 'YouTube Premium', planName: '1 Bulan Via Invite', price: '15k', warranty: 'Garansi 1 Bulan', features: ['Via invite family', 'Termasuk YouTube Music'], isVisibleInStore: true
     },
     { id: 14, name: 'YouTube - 3 Bulan Individual', unit: 'Lisensi', minStock: 10, currentStock: 19, description: 'Akun dari seller, garansi penuh 3 bulan, termasuk YouTube Music.', alertConfig: defaultAlertConfig, icon: '',
-        category: 'Akun Streaming', groupName: 'YouTube Premium', planName: '3 Bulan Individual', price: '40k', warranty: 'Garansi 3 Bulan', features: ['Akun dari seller', 'Termasuk YouTube Music'], isVisibleInStore: true, orderLink: 'https://wa.me/6285779462118?text=Halo,%20saya%20mau%20pesan%20YouTube%20Premium'
+        category: 'Akun Streaming', groupName: 'YouTube Premium', planName: '3 Bulan Individual', price: '40k', warranty: 'Garansi 3 Bulan', features: ['Akun dari seller', 'Termasuk YouTube Music'], isVisibleInStore: true
     },
     // Spotify
     { id: 15, name: 'Spotify - INDPLAN Student', unit: 'Akun', minStock: 5, currentStock: 11, description: 'Akun private khusus pelajar, garansi penuh.', alertConfig: defaultAlertConfig, icon: '',
-        category: 'Akun Streaming', groupName: 'Spotify Premium', planName: 'INDPLAN Student', price: '20k', warranty: 'Garansi 1 Bulan', features: ['Akun private', 'Full Garansi'], isVisibleInStore: true, orderLink: 'https://wa.me/6285779462118?text=Halo,%20saya%20mau%20pesan%20Spotify%20Premium'
+        category: 'Akun Streaming', groupName: 'Spotify Premium', planName: 'INDPLAN Student', price: '20k', warranty: 'Garansi 1 Bulan', features: ['Akun private', 'Full Garansi'], isVisibleInStore: true
     },
     // New Item Example
     { id: 16, name: 'Mobile Legends - 86 Diamonds', unit: 'Diamond', minStock: 100, currentStock: 1000, description: 'Top up 86 Diamonds untuk Mobile Legends.', alertConfig: defaultAlertConfig, icon: '',
-        category: 'Voucher Game', groupName: 'Mobile Legends', planName: '86 Diamonds', price: '25k', warranty: 'Proses Cepat', features: ['Legal & Aman', 'Input User ID & Zone ID'], isVisibleInStore: true, orderLink: 'https://wa.me/6285779462118?text=Halo,%20saya%20mau%20pesan%20diamond%20ML'
+        category: 'Voucher Game', groupName: 'Mobile Legends', planName: '86 Diamonds', price: '25k', warranty: 'Proses Cepat', features: ['Legal & Aman', 'Input User ID & Zone ID'], isVisibleInStore: true
     },
 ];
 
@@ -134,6 +135,12 @@ const initialResellers: Reseller[] = [
     { id: 2, name: 'Berkah Premium', whatsappNumber: '6281298765432', joinDate: new Date('2023-03-22').toISOString(), commissionRate: 15, status: 'active' },
 ];
 
+const initialDiscounts: Discount[] = [
+    { id: '1', code: 'HEMAT10', type: 'percentage', value: 10, minPurchase: 50000, isActive: true },
+    { id: '2', code: 'FUTOPREMIUM', type: 'fixed', value: 15000, minPurchase: 100000, isActive: true },
+    { id: '3', code: 'TIDAKAKTIF', type: 'percentage', value: 20, minPurchase: 0, isActive: false },
+];
+
 type CartItem = { itemId: number; quantity: number };
 
 type View = 'store' | 'stock' | 'reseller' | 'refund';
@@ -151,6 +158,7 @@ function App() {
     const [suggestions, setSuggestions] = useLocalStorage<Suggestion[]>('app-suggestions', initialSuggestions);
     const [userNotifications, setUserNotifications] = useLocalStorage<UserNotification[]>('user-notifications', initialUserNotifications);
     const [resellers, setResellers] = useLocalStorage<Reseller[]>('stock-resellers', initialResellers);
+    const [discounts, setDiscounts] = useLocalStorage<Discount[]>('stock-discounts', initialDiscounts);
     const [activeView, setActiveView] = useState<View>('store');
     const [feedback, setFeedback] = useState<FeedbackMessage | null>(null);
     const [cart, setCart] = useLocalStorage<CartItem[]>('user-cart', []);
@@ -159,6 +167,9 @@ function App() {
     const [isWishlistOpen, setIsWishlistOpen] = useState(false);
     const [cartView, setCartView] = useState<'cart' | 'checkout' | 'success'>('cart');
     const [selectedItemDetail, setSelectedItemDetail] = useState<Item | null>(null);
+    const [appliedDiscountCode, setAppliedDiscountCode] = useLocalStorage<string | null>('user-applied-discount', null);
+    const [isBundleBuilderOpen, setIsBundleBuilderOpen] = useState(false);
+    const [bundleDiscount, setBundleDiscount] = useLocalStorage<number>('bundle-discount', 0);
 
 
     // Data migration and validation for existing users
@@ -209,13 +220,13 @@ function App() {
             setTransactions(current => Array.isArray(current) ? current : initialTransactions);
             setSuggestions(current => Array.isArray(current) ? current : initialSuggestions);
             setUserNotifications(current => Array.isArray(current) ? current : initialUserNotifications);
+            setDiscounts(current => Array.isArray(current) ? current : initialDiscounts);
             setCart(current => Array.isArray(current) ? current : []);
             setWishlist(current => Array.isArray(current) ? current.filter(id => typeof id === 'number') : []);
         };
         migrateData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-
 
     const showFeedback = (feedback: FeedbackMessage | null) => {
         setFeedback(feedback);
@@ -313,6 +324,26 @@ function App() {
         }
     };
     
+    // Discount Handlers
+    const handleAddDiscount = (discountData: Omit<Discount, 'id'>) => {
+        const newDiscount: Discount = { ...discountData, id: Date.now().toString() };
+        setDiscounts(prev => [...prev, newDiscount]);
+        showFeedback({ message: `Diskon "${discountData.code}" berhasil ditambahkan.`, type: 'success' });
+    };
+
+    const handleUpdateDiscount = (updatedDiscount: Discount) => {
+        setDiscounts(prev => prev.map(d => d.id === updatedDiscount.id ? updatedDiscount : d));
+        showFeedback({ message: `Diskon "${updatedDiscount.code}" berhasil diperbarui.`, type: 'success' });
+    };
+
+    const handleDeleteDiscount = (discountId: string) => {
+        const code = discounts.find(d => d.id === discountId)?.code || 'Diskon';
+        if (window.confirm(`Yakin ingin menghapus diskon "${code}"?`)) {
+            setDiscounts(prev => prev.filter(d => d.id !== discountId));
+            showFeedback({ message: `Diskon "${code}" dihapus.`, type: 'success' });
+        }
+    };
+
     // Suggestion Handlers
     const handleAddSuggestion = (suggestionData: Omit<Suggestion, 'id'>) => {
         setSuggestions(prev => [...prev, { ...suggestionData, id: Date.now() }]);
@@ -359,6 +390,8 @@ function App() {
             showFeedback({ message: `Maaf, stok untuk "${item?.name || 'item'}" sedang habis.`, type: 'error' });
             return;
         }
+        setBundleDiscount(0); // Any manual cart addition breaks the bundle
+        setAppliedDiscountCode(null);
         setCart(prev => {
             const existing = prev.find(item => item.itemId === itemId);
             if (existing) {
@@ -369,13 +402,27 @@ function App() {
         showFeedback({ message: `"${item.name}" ditambahkan ke keranjang.`, type: 'success' });
     };
 
-    const handleQuickBuy = (itemId: number) => {
-        handleAddToCart(itemId);
-        setIsCartOpen(true);
+    const handleAddBundleToCart = (bundleItems: Item[], discount: number) => {
+        // Replace current cart with the new bundle
+        const newCartItems = bundleItems.map(item => ({ itemId: item.id, quantity: 1 }));
+        setCart(newCartItems);
+        setBundleDiscount(discount);
+        setAppliedDiscountCode(null); // Clear any coupon code
+        setIsBundleBuilderOpen(false);
+        setIsCartOpen(true); // Open cart to show the result
+        showFeedback({ type: 'success', message: 'Paket berhasil dibuat dan ditambahkan ke keranjang!' });
+    };
+
+    const handleQuickBuy = (item: Item) => {
+        const adminWhatsApp = "6285779462118";
+        const message = encodeURIComponent(`Halo, saya mau pesan cepat:\n\n*${item.name}*\nHarga: *${item.price}*\n\nMohon info ketersediaan stoknya. Terima kasih!`);
+        window.open(`https://wa.me/${adminWhatsApp}?text=${message}`, '_blank');
         setSelectedItemDetail(null); // Close detail view if open
     };
 
     const handleUpdateCartQuantity = (itemId: number, quantity: number) => {
+        setBundleDiscount(0); // Any manual cart modification breaks the bundle
+        setAppliedDiscountCode(null);
         if (quantity <= 0) {
             setCart(prev => prev.filter(item => item.itemId !== itemId));
         } else {
@@ -389,36 +436,12 @@ function App() {
         }
     };
     
-    const handleCheckout = (cartItems: CartItem[], customerDetails: { name: string; whatsapp: string }): boolean => {
-        let hasEnoughStock = true;
-        const stockUpdates = new Map<number, number>();
-
-        for (const cartItem of cartItems) {
-            const itemInDb = items.find(i => i.id === cartItem.itemId);
-            if (!itemInDb || itemInDb.currentStock < cartItem.quantity) {
-                showFeedback({ message: `Stok untuk "${itemInDb?.name || 'item'}" tidak mencukupi!`, type: 'error' });
-                hasEnoughStock = false;
-                break;
-            }
-            stockUpdates.set(itemInDb.id, itemInDb.currentStock - cartItem.quantity);
-        }
-
-        if (!hasEnoughStock) return false;
-
-        const newTransactions = cartItems.map(ci => ({
-            id: Date.now() + ci.itemId,
-            itemId: ci.itemId,
-            type: TransactionType.OUT,
-            quantity: ci.quantity,
-            date: new Date().toISOString(),
-            description: `Penjualan ke ${customerDetails.name} (${customerDetails.whatsapp})`,
-        }));
-
-        setItems(prevItems => prevItems.map(item => stockUpdates.has(item.id) ? { ...item, currentStock: stockUpdates.get(item.id)! } : item));
-        setTransactions(prevTxs => [...newTransactions, ...prevTxs]);
+    const handleWhatsAppOrderSent = () => {
         setCart([]);
-        
-        return true;
+        setAppliedDiscountCode(null);
+        setBundleDiscount(0);
+        setCartView('success');
+        showFeedback({ message: 'Pesanan Anda telah diformat untuk dikirim via WhatsApp.', type: 'success' });
     };
 
 
@@ -429,6 +452,7 @@ function App() {
                             items={items} 
                             transactions={transactions} 
                             resellers={resellers}
+                            discounts={discounts}
                             onAddItem={handleAddItem} 
                             onUpdateItem={handleUpdateItem} 
                             onDeleteItem={handleDeleteItem} 
@@ -438,6 +462,9 @@ function App() {
                             onInviteReseller={handleInviteReseller}
                             onUpdateReseller={handleUpdateReseller}
                             onDeleteReseller={handleDeleteReseller}
+                            onAddDiscount={handleAddDiscount}
+                            onUpdateDiscount={handleUpdateDiscount}
+                            onDeleteDiscount={handleDeleteDiscount}
                             onSwitchToStore={() => setActiveView('store')}
                             feedback={feedback}
                             clearFeedback={() => setFeedback(null)}
@@ -473,6 +500,7 @@ function App() {
                             onToggleWishlist={handleToggleWishlist}
                             onToggleWishlistPanel={() => setIsWishlistOpen(!isWishlistOpen)}
                             onSelectItemDetail={setSelectedItemDetail}
+                            onOpenBundleBuilder={() => setIsBundleBuilderOpen(true)}
                        />;
         }
     };
@@ -492,6 +520,13 @@ function App() {
                     onToggleWishlist={handleToggleWishlist}
                 />
             )}
+            {isBundleBuilderOpen && (
+                <BundleBuilder
+                    items={items}
+                    onClose={() => setIsBundleBuilderOpen(false)}
+                    onAddBundleToCart={handleAddBundleToCart}
+                />
+            )}
             <Cart 
                 isOpen={isCartOpen}
                 onClose={() => {
@@ -507,10 +542,14 @@ function App() {
                 cart={cart}
                 items={items}
                 onUpdateQuantity={handleUpdateCartQuantity}
-                onCheckout={handleCheckout}
+                onOrderSent={handleWhatsAppOrderSent}
                 setFeedback={showFeedback}
                 view={cartView}
                 onViewChange={setCartView}
+                discounts={discounts}
+                appliedDiscountCode={appliedDiscountCode}
+                setAppliedDiscountCode={setAppliedDiscountCode}
+                bundleDiscount={bundleDiscount}
             />
             <Wishlist
                 isOpen={isWishlistOpen}

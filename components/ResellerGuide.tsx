@@ -1,5 +1,5 @@
 import React from 'react';
-import { StoreIcon, BotIcon, TrophyIcon, SparklesIcon, PriceTagIcon } from './Icons';
+import { StoreIcon, BotIcon, TrophyIcon, SparklesIcon, PriceTagIcon, ChatBubbleLeftEllipsisIcon } from './Icons';
 
 interface ResellerGuideProps {
     onSwitchToStore: () => void;
@@ -54,16 +54,18 @@ const ResellerGuide: React.FC<ResellerGuideProps> = ({ onSwitchToStore }) => {
                      <GuideStep icon={TrophyIcon} title="Bangun Branding Sendiri">
                         Buat toko online-mu sendiri di media sosial atau marketplace. Gunakan nama dan logo yang unik. Jangan hanya menyalin materi promosi kami, kreasikan gayamu sendiri.
                     </GuideStep>
-                    <GuideStep icon={BotIcon} title="Manfaatkan Media Promosi">
-                        Gunakan foto, video, dan testimoni yang kami sediakan di grup WhatsApp. Buat caption yang menarik untuk mempromosikan produk di status WhatsApp, Instagram Story, atau TikTok.
-                    </GuideStep>
-                     <GuideStep icon={SparklesIcon} title="Layanan Pelanggan Prima">
-                        Jadilah reseller yang ramah dan responsif. Jawab pertanyaan pelanggan dengan cepat dan sabar. Pelanggan yang puas akan kembali lagi dan merekomendasikan tokomu.
-                    </GuideStep>
-                     <GuideStep icon={TrophyIcon} title="Jaga Reputasi">
-                        Kejujuran adalah modal utama. Jangan pernah menipu pelanggan. Jika ada masalah, selesaikan dengan baik. Reputasi yang baik akan membangun bisnis jangka panjang.
-                    </GuideStep>
                 </div>
+
+                 <div className="mt-12 bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md">
+                    <div className="text-center">
+                        <ChatBubbleLeftEllipsisIcon className="h-12 w-12 mx-auto text-cyan-500 mb-4" />
+                        <h3 className="text-2xl font-bold mb-2">Butuh Bantuan?</h3>
+                        <p className="text-gray-600 dark:text-gray-400">
+                            Gunakan ikon bantuan <span className="font-bold text-cyan-500">mengambang</span> di pojok kanan bawah halaman toko untuk terhubung langsung dengan BOT 24 Jam atau Admin kami.
+                        </p>
+                    </div>
+                </div>
+
              </div>
         </div>
     );

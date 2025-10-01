@@ -18,7 +18,7 @@ interface ProductDetailViewProps {
     item: Item;
     onClose: () => void;
     onAddToCart: (itemId: number) => void;
-    onQuickBuy: (itemId: number) => void;
+    onQuickBuy: (item: Item) => void;
     wishlist: number[];
     onToggleWishlist: (itemId: number) => void;
 }
@@ -209,10 +209,10 @@ const ProductDetailView: React.FC<ProductDetailViewProps> = ({ item, onClose, on
                                     Tambah Keranjang
                                 </button>
                                  <button 
-                                    onClick={() => onQuickBuy(item.id)}
+                                    onClick={() => onQuickBuy(item)}
                                     className="w-full bg-cyan-500 text-white font-semibold py-3 rounded-lg hover:bg-cyan-600 transition-colors flex items-center justify-center gap-2"
                                 >
-                                    Beli Sekarang
+                                    Beli Cepat
                                     <ArrowRightIcon className="h-4 w-4" />
                                 </button>
                             </div>

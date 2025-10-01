@@ -1,5 +1,3 @@
-import React from 'react';
-
 export enum TransactionType {
   IN = 'IN',
   OUT = 'OUT',
@@ -104,18 +102,11 @@ export interface Reseller {
     inviteCode?: string;
 }
 
-declare global {
-  interface Window {
-    snap: {
-      pay: (
-        transactionToken: string,
-        options?: {
-          onSuccess?: (result: any) => void;
-          onPending?: (result: any) => void;
-          onError?: (result: any) => void;
-          onClose?: () => void;
-        }
-      ) => void;
-    };
-  }
+export interface Discount {
+  id: string; 
+  code: string;
+  type: 'percentage' | 'fixed';
+  value: number;
+  minPurchase: number; // Minimum purchase amount in currency
+  isActive: boolean;
 }

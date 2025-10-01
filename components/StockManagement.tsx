@@ -1,23 +1,26 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { GoogleGenAI, FunctionDeclaration, Type } from "@google/genai";
-import { Item, Transaction, NotificationType, FeedbackMessage, AlertConfigType, Reseller } from '../types';
+import { Item, Transaction, NotificationType, FeedbackMessage, AlertConfigType, Reseller, Discount } from '../types';
 import Dashboard from './Dashboard';
 import ManageItems from './ManageItems';
 import Transactions from './Transactions';
 import History from './History';
 import Reports from './Reports';
 import ManageResellers from './ManageResellers';
+import ManageDiscounts from './ManageDiscounts';
 import Alert from './Alert';
 import { useNotifications } from '../contexts/NotificationContext';
 import { Notification } from '../types';
-import { BellIcon, DashboardIcon, BoxIcon, TransactionIcon, HistoryIcon, ReportIcon, StoreIcon, WarningIcon, XIcon, UserGroupIcon } from './Icons';
+import { BellIcon, DashboardIcon, BoxIcon, TransactionIcon, HistoryIcon, ReportIcon, StoreIcon, WarningIcon, XIcon, UserGroupIcon, SparklesIcon, TicketIcon } from './Icons';
 import { ThemeToggle } from './ThemeToggle';
 import Tooltip from './Tooltip';
+import AiTools from './AiTools';
 
 interface StockManagementProps {
     items: Item[];
     transactions: Transaction[];
     resellers: Reseller[];
+    discounts: Discount[];
     onAddItem: (itemData: Omit<Item, 'id'>) => void;
     onUpdateItem: (updatedItem: Item) => void;
     onDeleteItem: (itemId: number) => void;
@@ -27,21 +30,26 @@ interface StockManagementProps {
     onInviteReseller: (inviteData: { name: string; email: string; commissionRate: number; inviteCode: string }) => void;
     onUpdateReseller: (updatedReseller: Reseller) => void;
     onDeleteReseller: (resellerId: number) => void;
+    onAddDiscount: (discountData: Omit<Discount, 'id'>) => void;
+    onUpdateDiscount: (updatedDiscount: Discount) => void;
+    onDeleteDiscount: (discountId: string) => void;
     onSwitchToStore: () => void;
     feedback: FeedbackMessage | null;
     clearFeedback: () => void;
     setFeedback: (feedback: FeedbackMessage | null) => void;
 }
 
-type StockView = 'dashboard' | 'items' | 'transactions' | 'resellers' | 'history' | 'reports';
+type StockView = 'dashboard' | 'items' | 'transactions' | 'resellers' | 'discounts' | 'history' | 'reports' | 'ai-tools';
 
 const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: DashboardIcon },
     { id: 'items', label: 'Kelola Item', icon: BoxIcon },
     { id: 'transactions', label: 'Transaksi', icon: TransactionIcon },
     { id: 'resellers', label: 'Reseller', icon: UserGroupIcon },
+    { id: 'discounts', label: 'Diskon', icon: TicketIcon },
     { id: 'history', label: 'Riwayat', icon: HistoryIcon },
     { id: 'reports', label: 'Laporan', icon: ReportIcon },
+    { id: 'ai-tools', label: 'Layanan AI', icon: SparklesIcon },
 ];
 
 const BottomNavItem: React.FC<{
@@ -258,10 +266,19 @@ const StockManagement: React.FC<StockManagementProps> = (props) => {
                             onDeleteReseller={props.onDeleteReseller} 
                             setFeedback={props.setFeedback}
                        />;
+            case 'discounts':
+                return <ManageDiscounts 
+                            discounts={props.discounts}
+                            onAddDiscount={props.onAddDiscount}
+                            onUpdateDiscount={props.onUpdateDiscount}
+                            onDeleteDiscount={props.onDeleteDiscount}
+                        />;
             case 'history':
                 return <History items={props.items} transactions={props.transactions} resellers={props.resellers} />;
             case 'reports':
                 return <Reports items={props.items} transactions={props.transactions} resellers={props.resellers} />;
+            case 'ai-tools':
+                return <AiTools items={props.items} />;
             default:
                 return <Dashboard items={props.items} transactions={props.transactions} resellers={props.resellers} />;
         }

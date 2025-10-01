@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Item, FeedbackMessage } from '../types';
-import { XIcon, TrashIcon, PlusIcon, MinusIcon, ShoppingCartIcon, CheckCircleIcon, QrisIcon, GopayIcon, OvoIcon, VirtualAccountIcon, CreditCardIcon } from './Icons';
+import { Item, FeedbackMessage, Discount } from '../types';
+import { XIcon, TrashIcon, PlusIcon, MinusIcon, ShoppingCartIcon, CheckCircleIcon, PaperAirplaneIcon, TicketIcon } from './Icons';
 import Tooltip from './Tooltip';
 
 type CartItem = { itemId: number; quantity: number };
@@ -15,21 +15,15 @@ interface CartProps {
     cart: CartItem[];
     items: Item[];
     onUpdateQuantity: (itemId: number, quantity: number) => void;
-    onCheckout: (cartItems: CartItem[], customerDetails: { name: string; whatsapp: string }) => boolean;
+    onOrderSent: () => void;
     setFeedback: (feedback: FeedbackMessage | null) => void;
     view: 'cart' | 'checkout' | 'success';
     onViewChange: (view: 'cart' | 'checkout' | 'success') => void;
+    discounts: Discount[];
+    appliedDiscountCode: string | null;
+    setAppliedDiscountCode: (code: string | null) => void;
+    bundleDiscount: number;
 }
-
-// ===================================================================================
-// !! PERINGATAN KEAMANAN !!
-// Kunci server tidak boleh diekspos di sisi klien dalam aplikasi produksi.
-// Ini hanya untuk tujuan demonstrasi dalam lingkungan sandbox frontend-only.
-// Dalam aplikasi nyata, panggilan untuk membuat token transaksi HARUS dilakukan di backend.
-// ===================================================================================
-const MIDTRANS_SERVER_KEY_SANDBOX = 'SB-Mid-server-Tropss2uA5p-sW4_';
-const MIDTRANS_API_URL = 'https://app.sandbox.midtrans.com/snap/v1/transactions';
-
 
 const parsePrice = (priceStr: string): number => {
     if (!priceStr) return 0;
@@ -41,23 +35,16 @@ const parsePrice = (priceStr: string): number => {
     return isNaN(value) ? 0 : value;
 };
 
-const PaymentMethodIcon: React.FC<{icon: React.FC<any>, label: string}> = ({ icon: Icon, label }) => (
-    <div className="flex flex-col items-center gap-1 text-center">
-        <div className="p-2 border rounded-lg bg-gray-50 dark:bg-gray-900 dark:border-gray-600">
-            <Icon className="h-6 w-6 text-gray-700 dark:text-gray-300" />
-        </div>
-        <span className="text-xs text-gray-500 dark:text-gray-400">{label}</span>
-    </div>
-);
 
-const Cart: React.FC<CartProps> = ({ isOpen, onClose, cart, items, onUpdateQuantity, onCheckout, setFeedback, view, onViewChange }) => {
-    const [customerDetails, setCustomerDetails] = useState({ name: '', whatsapp: '' });
-    const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+const Cart: React.FC<CartProps> = ({ isOpen, onClose, cart, items, onUpdateQuantity, onOrderSent, setFeedback, view, onViewChange, discounts, appliedDiscountCode, setAppliedDiscountCode, bundleDiscount }) => {
+    const [customerDetails, setCustomerDetails] = useState({ name: '', email: '' });
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [discountCodeInput, setDiscountCodeInput] = useState('');
 
     useEffect(() => {
         if (isOpen) {
             if (view === 'success' && cart.length === 0) {
-                 // stay on success view even if cart is now empty
+                 // stay on success view
             } else if (cart.length === 0 && view !== 'success') {
                 onViewChange('cart');
             }
@@ -73,90 +60,105 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, cart, items, onUpdateQuant
             .filter((item): item is CartItemDetails => item !== null);
     }, [cart, items]);
 
-    const totalPrice = useMemo(() => {
-        return cartItems.reduce((total, item) => total + parsePrice(item.price) * item.quantity, 0);
-    }, [cartItems]);
+    const { subtotal, discountAmount, totalPrice, appliedDiscount } = useMemo(() => {
+        const sub = cartItems.reduce((total, item) => total + parsePrice(item.price) * item.quantity, 0);
+        let couponDiscount = 0;
+        let finalDiscount: Discount | null = null;
+    
+        if (appliedDiscountCode && bundleDiscount === 0) { // Coupon is ignored if bundle discount is active
+            const discount = discounts.find(d => d.code.toLowerCase() === appliedDiscountCode.toLowerCase());
+            if (discount && discount.isActive && sub >= discount.minPurchase) {
+                finalDiscount = discount;
+                if (discount.type === 'percentage') {
+                    couponDiscount = Math.floor(sub * (discount.value / 100));
+                } else { // fixed
+                    couponDiscount = discount.value;
+                }
+            }
+        }
+    
+        const totalDiscount = couponDiscount + bundleDiscount;
+        const total = sub - totalDiscount;
+        return { subtotal: sub, discountAmount: totalDiscount, totalPrice: total > 0 ? total : 0, appliedDiscount: finalDiscount };
+    }, [cartItems, appliedDiscountCode, discounts, bundleDiscount]);
 
-    const handleCheckoutSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!customerDetails.name.trim() || !customerDetails.whatsapp.trim()) {
-            setFeedback({ type: 'error', message: 'Nama dan nomor WhatsApp harus diisi.' });
+    const handleApplyDiscount = () => {
+        if (!discountCodeInput.trim()) {
+            setFeedback({ type: 'error', message: 'Silakan masukkan kode diskon.' });
+            return;
+        }
+        
+        const codeToApply = discountCodeInput.trim().toLowerCase();
+        const discount = discounts.find(d => d.code.toLowerCase() === codeToApply);
+
+        if (!discount) {
+            setFeedback({ type: 'error', message: 'Kode diskon tidak valid.' });
+            setAppliedDiscountCode(null);
+            return;
+        }
+        if (!discount.isActive) {
+            setFeedback({ type: 'error', message: 'Kode diskon sudah tidak aktif.' });
+            setAppliedDiscountCode(null);
+            return;
+        }
+        if (subtotal < discount.minPurchase) {
+            setFeedback({ type: 'error', message: `Minimum pembelian Rp ${discount.minPurchase.toLocaleString('id-ID')} untuk kode ini.` });
+            setAppliedDiscountCode(null);
             return;
         }
 
-        setIsProcessingPayment(true);
+        setAppliedDiscountCode(discount.code);
+        setFeedback({ type: 'success', message: `Kode "${discount.code}" berhasil diterapkan!` });
+    };
 
-        const transactionPayload = {
-            transaction_details: {
-                order_id: `FUTO-${Date.now()}`,
-                gross_amount: totalPrice,
-            },
-            item_details: cartItems.map(item => ({
-                id: item.id.toString(),
-                price: parsePrice(item.price),
-                quantity: item.quantity,
-                name: item.name,
-            })),
-            customer_details: {
-                first_name: customerDetails.name,
-                phone: customerDetails.whatsapp,
-            },
-        };
+    const handleRemoveDiscount = () => {
+        setAppliedDiscountCode(null);
+        setDiscountCodeInput('');
+        setFeedback({ type: 'info' as any, message: 'Kode diskon dihapus.' });
+    };
 
-        try {
-            const response = await fetch(MIDTRANS_API_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'Authorization': 'Basic ' + btoa(MIDTRANS_SERVER_KEY_SANDBOX + ':'),
-                },
-                body: JSON.stringify(transactionPayload),
-            });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`Gagal membuat transaksi Midtrans: ${errorData.error_messages.join(', ')}`);
-            }
-
-            const { token } = await response.json();
-
-            window.snap.pay(token, {
-                onSuccess: (result) => {
-                    console.log('Payment successful:', result);
-                    const success = onCheckout(cart, customerDetails);
-                    if (success) {
-                        onViewChange('success');
-                    } else {
-                        // Stock check failed even after payment, needs manual handling
-                        setFeedback({ type: 'error', message: 'Pembayaran berhasil, tetapi terjadi masalah stok. Hubungi admin.' });
-                    }
-                    setIsProcessingPayment(false);
-                },
-                onPending: (result) => {
-                    console.log('Payment pending:', result);
-                    setFeedback({ type: 'success', message: 'Pembayaran Anda sedang diproses.' });
-                    setIsProcessingPayment(false);
-                    onClose();
-                },
-                onError: (result) => {
-                    console.error('Payment error:', result);
-                    setFeedback({ type: 'error', message: 'Pembayaran gagal. Silakan coba lagi.' });
-                    setIsProcessingPayment(false);
-                },
-                onClose: () => {
-                    if (!isProcessingPayment) { // Only show if not followed by another callback
-                      setFeedback({ type: 'error', message: 'Anda menutup popup pembayaran.' });
-                    }
-                    setIsProcessingPayment(false);
-                },
-            });
-
-        } catch (error) {
-            console.error('Error during Midtrans checkout:', error);
-            setFeedback({ type: 'error', message: (error as Error).message || 'Gagal terhubung ke gateway pembayaran.' });
-            setIsProcessingPayment(false);
+    const handleCheckoutSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!customerDetails.name.trim() || !customerDetails.email.trim()) {
+            setFeedback({ type: 'error', message: 'Nama dan email harus diisi.' });
+            return;
         }
+
+        setIsProcessing(true);
+        const adminWhatsApp = "6285779462118";
+
+        let orderDetails = cartItems.map(item => 
+            `- *${item.name}* (x${item.quantity}) - Rp ${ (parsePrice(item.price) * item.quantity).toLocaleString('id-ID')}`
+        ).join('\n');
+
+        let summary = `\n\nSubtotal: Rp ${subtotal.toLocaleString('id-ID')}`;
+        if (bundleDiscount > 0) {
+            summary += `\nDiskon Paket: - Rp ${bundleDiscount.toLocaleString('id-ID')}`;
+        }
+        if (appliedDiscount) {
+            summary += `\nDiskon (${appliedDiscount.code}): - Rp ${discountAmount.toLocaleString('id-ID')}`;
+        }
+        summary += `\n*Total: Rp ${totalPrice.toLocaleString('id-ID')}*`;
+
+        const message = encodeURIComponent(
+`Halo Futo Premium, saya mau pesan:
+
+*Detail Pemesan:*
+Nama: ${customerDetails.name}
+Email: ${customerDetails.email}
+
+*Pesanan:*
+${orderDetails}
+${summary}
+
+Mohon konfirmasi ketersediaan dan instruksi selanjutnya. Terima kasih!`
+        );
+
+        window.open(`https://wa.me/${adminWhatsApp}?text=${message}`, '_blank');
+        
+        onOrderSent(); // This clears the cart and shows feedback
+        setIsProcessing(false);
     };
 
 
@@ -164,7 +166,8 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, cart, items, onUpdateQuant
         onClose();
         // Delay resetting view to avoid flicker during closing animation
         setTimeout(() => {
-            if (view !== 'success') {
+            // Always reset to cart view when closed, unless it was a fresh success
+            if(view !== 'success' || cart.length > 0) {
                 onViewChange('cart');
             }
         }, 300);
@@ -201,9 +204,46 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, cart, items, onUpdateQuant
                 )}
             </div>
             {cartItems.length > 0 && (
-                <footer className="p-4 border-t dark:border-gray-700">
-                    <div className="flex justify-between items-center mb-4">
-                        <span className="text-lg font-semibold">Total</span>
+                <footer className="p-4 border-t dark:border-gray-700 space-y-3">
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center text-md">
+                            <span className="text-gray-600 dark:text-gray-300">Subtotal</span>
+                            <span className="font-semibold">Rp {subtotal.toLocaleString('id-ID')}</span>
+                        </div>
+                        {bundleDiscount > 0 && (
+                             <div className="flex justify-between items-center text-md text-green-600 dark:text-green-400">
+                                <span>Diskon Paket</span>
+                                <span className="font-semibold">- Rp {bundleDiscount.toLocaleString('id-ID')}</span>
+                            </div>
+                        )}
+                        {appliedDiscount ? (
+                            <div className="flex justify-between items-center text-md">
+                                <button onClick={handleRemoveDiscount} className="text-red-500 text-sm flex items-center gap-1 hover:underline">
+                                    <XIcon className="h-4 w-4"/>
+                                    <span>Diskon ({appliedDiscount.code})</span>
+                                </button>
+                                <span className="font-semibold text-green-600 dark:text-green-400">- Rp {discountAmount.toLocaleString('id-ID')}</span>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <Tooltip text={bundleDiscount > 0 ? "Kode kupon tidak bisa digabung dengan diskon paket." : ""}>
+                                    <input
+                                        type="text"
+                                        placeholder="Masukkan kode diskon"
+                                        value={discountCodeInput}
+                                        onChange={(e) => setDiscountCodeInput(e.target.value)}
+                                        disabled={bundleDiscount > 0}
+                                        className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 text-sm disabled:bg-gray-200 disabled:dark:bg-gray-800 disabled:cursor-not-allowed"
+                                    />
+                                </Tooltip>
+                                <button onClick={handleApplyDiscount} disabled={bundleDiscount > 0} className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-sm font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 disabled:bg-gray-200 disabled:dark:bg-gray-800 disabled:cursor-not-allowed">
+                                    Pakai
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t dark:border-gray-600">
+                        <span className="text-lg font-bold">Total</span>
                         <span className="text-2xl font-bold text-cyan-500">Rp {totalPrice.toLocaleString('id-ID')}</span>
                     </div>
                     <button onClick={() => onViewChange('checkout')} className="w-full bg-cyan-500 text-white font-bold py-3 rounded-lg hover:bg-cyan-600 transition-colors">
@@ -217,27 +257,37 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, cart, items, onUpdateQuant
      const renderCheckoutView = () => (
         <>
             <div className="p-4 flex-grow overflow-y-auto">
-                <h3 className="font-bold text-lg mb-4">Detail Pelanggan</h3>
+                <h3 className="font-bold text-lg mb-4">Detail Pemesan</h3>
                 <form id="checkout-form" onSubmit={handleCheckoutSubmit} className="space-y-4">
                     <div>
                         <label className="text-sm">Nama Lengkap</label>
                         <input type="text" value={customerDetails.name} onChange={e => setCustomerDetails(p => ({...p, name: e.target.value}))} required className="w-full p-2 border rounded dark:bg-gray-900 dark:border-gray-600" />
                     </div>
                     <div>
-                        <label className="text-sm">Nomor WhatsApp</label>
-                        <input type="text" value={customerDetails.whatsapp} onChange={e => setCustomerDetails(p => ({...p, whatsapp: e.target.value}))} required className="w-full p-2 border rounded dark:bg-gray-900 dark:border-gray-600" placeholder="e.g. 628123456789" />
+                        <label className="text-sm">Email</label>
+                        <input type="email" value={customerDetails.email} onChange={e => setCustomerDetails(p => ({...p, email: e.target.value}))} required className="w-full p-2 border rounded dark:bg-gray-900 dark:border-gray-600" placeholder="e.g. user@example.com" />
                     </div>
                 </form>
 
                  <div className="mt-6 pt-4 border-t dark:border-gray-700">
                     <h4 className="font-semibold mb-2">Ringkasan Pesanan</h4>
                     <div className="space-y-1 text-sm">
-                        {cartItems.map(item => (
-                            <div key={item.id} className="flex justify-between">
-                                <span className="text-gray-600 dark:text-gray-300">{item.name} x{item.quantity}</span>
-                                <span>Rp {(parsePrice(item.price) * item.quantity).toLocaleString('id-ID')}</span>
+                        <div className="flex justify-between">
+                            <span className="text-gray-600 dark:text-gray-300">Subtotal</span>
+                            <span>Rp {subtotal.toLocaleString('id-ID')}</span>
+                        </div>
+                        {bundleDiscount > 0 && (
+                             <div className="flex justify-between text-green-600 dark:text-green-400">
+                                <span>Diskon Paket</span>
+                                <span>- Rp {bundleDiscount.toLocaleString('id-ID')}</span>
                             </div>
-                        ))}
+                        )}
+                         {appliedDiscount && (
+                            <div className="flex justify-between">
+                                <span className="text-green-600 dark:text-green-400">Diskon ({appliedDiscount.code})</span>
+                                <span className="text-green-600 dark:text-green-400">- Rp {discountAmount.toLocaleString('id-ID')}</span>
+                            </div>
+                        )}
                          <div className="flex justify-between font-bold pt-2 border-t dark:border-gray-600 mt-2">
                             <span>Total</span>
                             <span>Rp {totalPrice.toLocaleString('id-ID')}</span>
@@ -246,16 +296,8 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, cart, items, onUpdateQuant
                 </div>
 
                 <div className="mt-6 pt-4 border-t dark:border-gray-700">
-                    <h4 className="font-semibold mb-3">Metode Pembayaran</h4>
-                    <div className="grid grid-cols-5 gap-2">
-                        <PaymentMethodIcon icon={QrisIcon} label="QRIS" />
-                        <PaymentMethodIcon icon={GopayIcon} label="GoPay" />
-                        <PaymentMethodIcon icon={OvoIcon} label="OVO" />
-                        <PaymentMethodIcon icon={VirtualAccountIcon} label="VA" />
-                        <PaymentMethodIcon icon={CreditCardIcon} label="Kartu" />
-                    </div>
                     <p className="text-xs text-center text-gray-500 mt-3">
-                        Pembayaran aman dan terenkripsi diproses melalui Midtrans.
+                        Dengan menekan tombol di bawah, Anda akan diarahkan ke WhatsApp untuk mengirim detail pesanan Anda ke admin kami.
                     </p>
                 </div>
             </div>
@@ -263,8 +305,9 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, cart, items, onUpdateQuant
                  <button onClick={() => onViewChange('cart')} className="w-full bg-gray-200 dark:bg-gray-600 text-black dark:text-white font-bold py-3 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors">
                     Kembali
                 </button>
-                <button type="submit" form="checkout-form" disabled={isProcessingPayment} className="w-full bg-cyan-500 text-white font-bold py-3 rounded-lg hover:bg-cyan-600 transition-colors disabled:bg-gray-400 disabled:cursor-wait">
-                    {isProcessingPayment ? 'Memproses...' : 'Bayar Sekarang'}
+                <button type="submit" form="checkout-form" disabled={isProcessing} className="w-full bg-green-500 text-white font-bold py-3 rounded-lg hover:bg-green-600 transition-colors disabled:bg-gray-400 disabled:cursor-wait flex items-center justify-center gap-2">
+                    <PaperAirplaneIcon className="h-5 w-5"/>
+                    {isProcessing ? 'Memproses...' : 'Kirim via WhatsApp'}
                 </button>
             </footer>
         </>
@@ -273,8 +316,8 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, cart, items, onUpdateQuant
     const renderSuccessView = () => (
         <div className="p-4 flex-grow flex flex-col items-center justify-center text-center">
             <CheckCircleIcon className="h-24 w-24 text-green-500 mb-4" />
-            <h3 className="text-2xl font-bold">Pembayaran Berhasil!</h3>
-            <p className="text-gray-600 dark:text-gray-300 mt-2 mb-6">Terima kasih telah berbelanja. Pesanan Anda sedang diproses.</p>
+            <h3 className="text-2xl font-bold">Pesanan Siap Dikirim!</h3>
+            <p className="text-gray-600 dark:text-gray-300 mt-2 mb-6">Tab baru WhatsApp telah terbuka. Silakan kirim pesan yang sudah disiapkan untuk menyelesaikan pesanan Anda.</p>
             <button onClick={handleCloseAndReset} className="w-full max-w-xs bg-cyan-500 text-white font-bold py-3 rounded-lg hover:bg-cyan-600 transition-colors">
                 Tutup
             </button>
