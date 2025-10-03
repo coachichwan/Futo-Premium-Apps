@@ -9,7 +9,7 @@ import Cart from './components/Cart';
 import Wishlist from './components/Wishlist';
 import ProductDetailView from './components/ProductDetailView';
 import BundleBuilder from './components/BundleBuilder';
-import { StoreIcon, DashboardIcon, UserGroupIcon, CalculatorIcon } from './components/Icons';
+import { StoreIcon, DashboardIcon, UserGroupIcon, CalculatorIcon, EllipsisVerticalIcon, UserIcon as ResellerGuideIcon } from './components/Icons';
 
 
 // A simple hook to persist state to localStorage
@@ -83,20 +83,20 @@ const initialItems: Item[] = [
         category: 'Lisensi Produktivitas', groupName: 'CapCut Pro', planName: '30 Hari Full Garansi', price: '20k', warranty: 'Garansi 25 Hari', features: ['Full premium', 'Tanpa watermark', 'Join team'], isVisibleInStore: true
     },
     // Canva
-    { id: 9, name: 'Canva - MEMBER + DESIGNER', unit: 'Lisensi', minStock: 10, currentStock: 2, description: 'Desain tanpa batas dengan fitur Pro via invite email.', alertConfig: defaultAlertConfig, icon: '',
+    { id: 9, name: 'Canva - MEMBER + DESIGNER', unit: 'Lisensi', minStock: 10, currentStock: 2, description: '', alertConfig: defaultAlertConfig, icon: '',
         category: 'Lisensi Produktivitas', groupName: 'Canva Pro', planName: 'MEMBER + DESIGNER', price: '10k', warranty: 'Garansi 1 Bulan', features: ['Via invite email', 'Full Pro features'], isVisibleInStore: true
     },
-    { id: 10, name: 'Canva - PRO OWNER', unit: 'Lisensi', minStock: 5, currentStock: 12, description: 'Jadi owner tim Canva, bisa invite member, garansi penuh.', alertConfig: defaultAlertConfig, icon: '',
+    { id: 10, name: 'Canva - PRO OWNER', unit: 'Lisensi', minStock: 5, currentStock: 12, description: '', alertConfig: defaultAlertConfig, icon: '',
         category: 'Lisensi Produktivitas', groupName: 'Canva Pro', planName: 'PRO OWNER', price: '25k', warranty: 'Garansi 30 Hari', features: ['Akun owner', 'Bisa invite member', 'Full Pro features'], isVisibleInStore: true,
          testimonials: [
             { author: 'Andika P.', quote: 'Gila sih, dengan harga segini bisa jadi owner tim. Invite teman-teman jadi gampang, fitur pro-nya lengkap pol. Wajib coba buat yang sering desain.' }
         ]
     },
     // ChatGPT
-    { id: 11, name: 'ChatGPT - TEAM FAMPLAN', unit: 'Lisensi', minStock: 8, currentStock: 15, description: 'Akses model GPT-4o dengan limit lebih tinggi via invite email.', alertConfig: defaultAlertConfig, icon: '',
+    { id: 11, name: 'ChatGPT - TEAM FAMPLAN', unit: 'Lisensi', minStock: 8, currentStock: 15, description: '', alertConfig: defaultAlertConfig, icon: '',
         category: 'Lisensi Produktivitas', groupName: 'ChatGPT Plus', planName: 'TEAM FAMPLAN', price: '80k', warranty: 'Garansi 1 Bulan', features: ['Via invite email', 'Akses GPT-4o', 'Limit lebih tinggi'], isVisibleInStore: true
     },
-    { id: 12, name: 'ChatGPT - PLUS GARANSI', unit: 'Lisensi', minStock: 5, currentStock: 10, description: 'Akun siap pakai dari seller, akses GPT-4o, garansi penuh.', alertConfig: defaultAlertConfig, icon: '',
+    { id: 12, name: 'ChatGPT - PLUS GARANSI', unit: 'Lisensi', minStock: 5, currentStock: 10, description: '', alertConfig: defaultAlertConfig, icon: '',
         category: 'Lisensi Produktivitas', groupName: 'ChatGPT Plus', planName: 'PLUS GARANSI', price: '150k', warranty: 'Garansi 1 Bulan', features: ['Akun dari seller', 'Akses GPT-4o', 'Full garansi'], isVisibleInStore: true
     },
     // YouTube
@@ -107,7 +107,7 @@ const initialItems: Item[] = [
         category: 'Akun Streaming', groupName: 'YouTube Premium', planName: '3 Bulan Individual', price: '40k', warranty: 'Garansi 3 Bulan', features: ['Akun dari seller', 'Termasuk YouTube Music'], isVisibleInStore: true
     },
     // Spotify
-    { id: 15, name: 'Spotify - INDPLAN Student', unit: 'Akun', minStock: 5, currentStock: 11, description: 'Akun private khusus pelajar, garansi penuh.', alertConfig: defaultAlertConfig, icon: '',
+    { id: 15, name: 'Spotify - INDPLAN Student', unit: 'Akun', minStock: 5, currentStock: 11, description: '', alertConfig: defaultAlertConfig, icon: '',
         category: 'Akun Streaming', groupName: 'Spotify Premium', planName: 'INDPLAN Student', price: '20k', warranty: 'Garansi 1 Bulan', features: ['Akun private', 'Full Garansi'], isVisibleInStore: true
     },
     // New Item Example
@@ -143,13 +143,13 @@ const initialDiscounts: Discount[] = [
 
 type CartItem = { itemId: number; quantity: number };
 
-type View = 'store' | 'stock' | 'reseller' | 'refund';
+type View = 'store' | 'stock' | 'reseller' | 'refund' | 'reseller-guide';
 
 const mobileNavItems = [
     { id: 'store', label: 'Store', icon: StoreIcon },
     { id: 'stock', label: 'Stok', icon: DashboardIcon },
     { id: 'reseller', label: 'Reseller', icon: UserGroupIcon },
-    { id: 'refund', label: 'Refund', icon: CalculatorIcon },
+    { id: 'more', label: 'Lainnya', icon: EllipsisVerticalIcon },
 ];
 
 function App() {
@@ -170,6 +170,7 @@ function App() {
     const [appliedDiscountCode, setAppliedDiscountCode] = useLocalStorage<string | null>('user-applied-discount', null);
     const [isBundleBuilderOpen, setIsBundleBuilderOpen] = useState(false);
     const [bundleDiscount, setBundleDiscount] = useLocalStorage<number>('bundle-discount', 0);
+    const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
 
 
     // Data migration and validation for existing users
@@ -252,6 +253,14 @@ function App() {
     const handleUpdateItem = (updatedItem: Item) => {
         setItems(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
         showFeedback({ message: `Item "${updatedItem.name}" berhasil diperbarui.`, type: 'success' });
+    };
+
+    const handleBulkUpdateItems = (updatedItems: Item[]) => {
+        setItems(prevItems => {
+            const updatesMap = new Map(updatedItems.map(item => [item.id, item]));
+            return prevItems.map(item => updatesMap.get(item.id) || item);
+        });
+        showFeedback({ message: `${updatedItems.length} deskripsi item berhasil diperbarui dengan AI.`, type: 'success' });
     };
 
     const handleDeleteItem = (itemId: number) => {
@@ -444,36 +453,76 @@ function App() {
         showFeedback({ message: 'Pesanan Anda telah diformat untuk dikirim via WhatsApp.', type: 'success' });
     };
 
+    const MoreMenuModal: React.FC<{
+        isOpen: boolean;
+        onClose: () => void;
+        onNavigate: (view: View) => void;
+    }> = ({ isOpen, onClose, onNavigate }) => {
+        if (!isOpen) return null;
+    
+        const handleNavigate = (view: View) => {
+            onNavigate(view);
+            onClose();
+        };
+    
+        return (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center p-4 md:hidden animate-fade-in" onClick={onClose}>
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md animate-slide-up" onClick={e => e.stopPropagation()}>
+                    <div className="p-2">
+                        <button onClick={() => handleNavigate('refund')} className="w-full flex items-center gap-4 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left">
+                            <CalculatorIcon className="h-6 w-6 text-cyan-500" />
+                            <div>
+                                <p className="font-semibold">Kalkulator Refund</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Hitung pengembalian dana pelanggan.</p>
+                            </div>
+                        </button>
+                        <button onClick={() => handleNavigate('reseller-guide')} className="w-full flex items-center gap-4 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left">
+                            <ResellerGuideIcon className="h-6 w-6 text-cyan-500" />
+                            <div>
+                                <p className="font-semibold">Panduan Reseller</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Mulai bisnismu sekarang.</p>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     const renderView = () => {
+        const stockManagementProps = {
+            items: items,
+            transactions: transactions,
+            resellers: resellers,
+            discounts: discounts,
+            onAddItem: handleAddItem,
+            onUpdateItem: handleUpdateItem,
+            onDeleteItem: handleDeleteItem,
+            onAddTransaction: handleAddTransaction,
+            onBulkAddItems: handleBulkAddItems,
+            onBulkUpdateItems: handleBulkUpdateItems,
+            onAddReseller: handleAddReseller,
+            onInviteReseller: handleInviteReseller,
+            onUpdateReseller: handleUpdateReseller,
+            onDeleteReseller: handleDeleteReseller,
+            onAddDiscount: handleAddDiscount,
+            onUpdateDiscount: handleUpdateDiscount,
+            onDeleteDiscount: handleDeleteDiscount,
+            onSwitchToStore: () => setActiveView('store'),
+            feedback: feedback,
+            clearFeedback: () => setFeedback(null),
+            setFeedback: setFeedback,
+        };
+
         switch (activeView) {
             case 'stock':
-                return <StockManagement 
-                            items={items} 
-                            transactions={transactions} 
-                            resellers={resellers}
-                            discounts={discounts}
-                            onAddItem={handleAddItem} 
-                            onUpdateItem={handleUpdateItem} 
-                            onDeleteItem={handleDeleteItem} 
-                            onAddTransaction={handleAddTransaction} 
-                            onBulkAddItems={handleBulkAddItems}
-                            onAddReseller={handleAddReseller}
-                            onInviteReseller={handleInviteReseller}
-                            onUpdateReseller={handleUpdateReseller}
-                            onDeleteReseller={handleDeleteReseller}
-                            onAddDiscount={handleAddDiscount}
-                            onUpdateDiscount={handleUpdateDiscount}
-                            onDeleteDiscount={handleDeleteDiscount}
-                            onSwitchToStore={() => setActiveView('store')}
-                            feedback={feedback}
-                            clearFeedback={() => setFeedback(null)}
-                            setFeedback={setFeedback}
-                       />;
+                return <StockManagement {...stockManagementProps} initialView="dashboard" />;
             case 'reseller':
-                return <ResellerGuide onSwitchToStore={() => setActiveView('store')} />;
+                return <StockManagement {...stockManagementProps} initialView="resellers" />;
             case 'refund':
                 return <RefundCalculator items={items} onAddTransaction={handleAddTransaction} onSwitchToStore={() => setActiveView('store')} />;
+            case 'reseller-guide':
+                return <ResellerGuide onSwitchToStore={() => setActiveView('store')} />;
             case 'store':
             default:
                 return <ProductCatalog 
@@ -483,6 +532,7 @@ function App() {
                             onSwitchToStock={() => setActiveView('stock')} 
                             onSwitchToReseller={() => setActiveView('reseller')}
                             onSwitchToRefund={() => setActiveView('refund')}
+                            onSwitchToResellerGuide={() => setActiveView('reseller-guide')}
                             suggestions={suggestions}
                             onAddSuggestion={handleAddSuggestion}
                             onUpdateSuggestion={handleUpdateSuggestion}
@@ -559,6 +609,11 @@ function App() {
                 onToggleWishlist={handleToggleWishlist}
                 onAddToCart={handleAddToCart}
             />
+            <MoreMenuModal
+                isOpen={isMoreMenuOpen}
+                onClose={() => setIsMoreMenuOpen(false)}
+                onNavigate={setActiveView}
+            />
              {/* Mobile Bottom Navigation */}
             <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t dark:border-gray-700 shadow-[0_-2px_5px_rgba(0,0,0,0.1)] flex justify-around z-40">
                 {mobileNavItems.map(item => {
@@ -567,7 +622,13 @@ function App() {
                     return (
                          <button
                             key={item.id}
-                            onClick={() => setActiveView(item.id as View)}
+                            onClick={() => {
+                                if (item.id === 'more') {
+                                    setIsMoreMenuOpen(true);
+                                } else {
+                                    setActiveView(item.id as View)
+                                }
+                            }}
                             aria-label={item.label}
                             className={`flex flex-col items-center justify-center w-full pt-2 pb-1 text-xs transition-colors duration-200 ${
                                 isActive ? 'text-cyan-500' : 'text-gray-500 dark:text-gray-400 hover:text-cyan-500 dark:hover:text-cyan-400'

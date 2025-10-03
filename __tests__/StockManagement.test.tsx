@@ -7,6 +7,7 @@ import StockManagement from '../components/StockManagement';
 import { FeedbackMessage } from '../types';
 import { ThemeProvider } from '../contexts/ThemeContext';
 import { NotificationProvider } from '../contexts/NotificationContext';
+import '@testing-library/jest-dom';
 
 // Mock child components to isolate the StockManagement component's logic
 jest.mock('../components/Dashboard', () => () => <div>Dashboard View</div>);
@@ -15,12 +16,17 @@ jest.mock('../components/Transactions', () => () => <div>Transactions View</div>
 jest.mock('../components/ManageResellers', () => () => <div>ManageResellers View</div>);
 jest.mock('../components/History', () => () => <div>History View</div>);
 jest.mock('../components/Reports', () => () => <div>Reports View</div>);
+// FIX: Add mock for ManageDiscounts and AiTools which are children of StockManagement
+jest.mock('../components/ManageDiscounts', () => () => <div>ManageDiscounts View</div>);
+jest.mock('../components/AiTools', () => () => <div>AiTools View</div>);
+
 
 // Mock the AI to prevent API calls
 jest.mock('@google/genai', () => ({
     GoogleGenAI: jest.fn().mockImplementation(() => ({
       models: {
-        generateContent: jest.fn().mockResolvedValue({ functionCalls: [] }),
+        // FIX: Cast resolved value to 'any' to prevent TypeScript error.
+        generateContent: jest.fn().mockResolvedValue({ functionCalls: [] } as any),
       },
     })),
     FunctionDeclaration: jest.fn(),
@@ -31,15 +37,20 @@ const mockProps = {
     items: [],
     transactions: [],
     resellers: [],
+    discounts: [],
     onAddItem: jest.fn(),
     onUpdateItem: jest.fn(),
     onDeleteItem: jest.fn(),
     onAddTransaction: jest.fn(),
     onBulkAddItems: jest.fn(),
+    onBulkUpdateItems: jest.fn(),
     onAddReseller: jest.fn(),
     onInviteReseller: jest.fn(),
     onUpdateReseller: jest.fn(),
     onDeleteReseller: jest.fn(),
+    onAddDiscount: jest.fn(),
+    onUpdateDiscount: jest.fn(),
+    onDeleteDiscount: jest.fn(),
     onSwitchToStore: jest.fn(),
     feedback: null,
     clearFeedback: jest.fn(),

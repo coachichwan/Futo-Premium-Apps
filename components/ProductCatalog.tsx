@@ -223,6 +223,7 @@ interface ProductCatalogProps {
     onSwitchToStock: () => void;
     onSwitchToReseller: () => void;
     onSwitchToRefund: () => void;
+    onSwitchToResellerGuide: () => void;
     suggestions: Suggestion[];
     onAddSuggestion: (suggestionData: Omit<Suggestion, 'id'>) => void;
     onUpdateSuggestion: (updatedSuggestion: Suggestion) => void;
@@ -250,6 +251,7 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
     onSwitchToStock, 
     onSwitchToReseller, 
     onSwitchToRefund,
+    onSwitchToResellerGuide,
     suggestions,
     onAddSuggestion,
     onUpdateSuggestion,
@@ -273,7 +275,6 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
     const [isNotificationPanelOpen, setNotificationPanelOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState('All');
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isDesktopMenuOpen, setIsDesktopMenuOpen] = useState(false);
     const [explainingFeature, setExplainingFeature] = useState<{ feature: string; description: string; isLoading: boolean } | null>(null);
     const [sortOption, setSortOption] = useState('default');
@@ -468,31 +469,15 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
                                     onMouseLeave={() => setIsDesktopMenuOpen(false)}
                                 >
                                     <a onClick={() => { onSwitchToStock(); setIsDesktopMenuOpen(false); }} className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">Stok Manajemen</a>
-                                    <a onClick={() => { onSwitchToReseller(); setIsDesktopMenuOpen(false); }} className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">Panduan Reseller</a>
+                                    <a onClick={() => { onSwitchToReseller(); setIsDesktopMenuOpen(false); }} className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">Manajemen Reseller</a>
                                     <a onClick={() => { onSwitchToRefund(); setIsDesktopMenuOpen(false); }} className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">Kalkulator Refund</a>
                                 </div>
                             )}
                         </div>
 
-                        {/* Mobile Menu Button */}
-                        <button onClick={() => setIsMobileMenuOpen(prev => !prev)} className="md:hidden p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white rounded-full">
-                           {isMobileMenuOpen ? <XIcon className="h-6 w-6"/> : <MenuIcon className="h-6 w-6"/>}
-                        </button>
                     </div>
                 </div>
             </header>
-
-            {/* Mobile Menu Panel */}
-            {isMobileMenuOpen && (
-                <div className="fixed inset-0 top-[69px] bg-gray-100 dark:bg-gray-900 z-30 md:hidden">
-                    <nav className="container mx-auto px-6 py-8 flex flex-col gap-6">
-                        <a onClick={() => { onSwitchToStock(); setIsMobileMenuOpen(false); }} className="text-lg text-gray-700 dark:text-gray-200 hover:text-cyan-500 font-medium cursor-pointer">Stok Manajemen</a>
-                        <a onClick={() => { onSwitchToReseller(); setIsMobileMenuOpen(false); }} className="text-lg text-gray-700 dark:text-gray-200 hover:text-cyan-500 font-medium cursor-pointer">Panduan Reseller</a>
-                        <a onClick={() => { onSwitchToRefund(); setIsMobileMenuOpen(false); }} className="text-lg text-gray-700 dark:text-gray-200 hover:text-cyan-500 font-medium cursor-pointer">Kalkulator Refund</a>
-                    </nav>
-                </div>
-            )}
-
 
             <main className="container mx-auto px-6 py-12">
                 {/* Hero Banner */}
@@ -525,6 +510,28 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
                     </button>
                 </div>
                 
+                {/* Reseller CTA */}
+                <div className="my-12">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden">
+                        <div className="p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <div className="flex items-center gap-4">
+                                <UserGroupIcon className="h-12 w-12 text-cyan-500 flex-shrink-0" />
+                                <div>
+                                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Jadi Reseller & Raih Keuntungan!</h3>
+                                    <p className="text-gray-600 dark:text-gray-400">Gabung dengan tim reseller kami dan dapatkan harga spesial.</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={onSwitchToResellerGuide}
+                                className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-cyan-500 text-white rounded-lg text-sm font-semibold hover:bg-cyan-600"
+                            >
+                                <span>Lihat Panduan</span>
+                                <ArrowRightIcon className="h-4 w-4" />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
                 {/* Reseller Section */}
                 {topResellers.length > 0 && (
                     <div className="my-12 p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-lg">
@@ -538,7 +545,7 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
                                 className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors text-sm font-semibold"
                             >
                                 <UserGroupIcon className="h-5 w-5" />
-                                <span>Lihat Panduan Reseller</span>
+                                <span>Kelola Reseller</span>
                             </button>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">

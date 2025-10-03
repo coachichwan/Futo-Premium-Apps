@@ -16,6 +16,8 @@ import { ThemeToggle } from './ThemeToggle';
 import Tooltip from './Tooltip';
 import AiTools from './AiTools';
 
+type StockView = 'dashboard' | 'items' | 'transactions' | 'resellers' | 'discounts' | 'history' | 'reports' | 'ai-tools';
+
 interface StockManagementProps {
     items: Item[];
     transactions: Transaction[];
@@ -26,6 +28,7 @@ interface StockManagementProps {
     onDeleteItem: (itemId: number) => void;
     onAddTransaction: (transactionData: Omit<Transaction, 'id'>) => void;
     onBulkAddItems: (newItems: Omit<Item, 'id'>[]) => void;
+    onBulkUpdateItems: (updatedItems: Item[]) => void;
     onAddReseller: (resellerData: Omit<Reseller, 'id' | 'joinDate' | 'status'>) => void;
     onInviteReseller: (inviteData: { name: string; email: string; commissionRate: number; inviteCode: string }) => void;
     onUpdateReseller: (updatedReseller: Reseller) => void;
@@ -37,9 +40,8 @@ interface StockManagementProps {
     feedback: FeedbackMessage | null;
     clearFeedback: () => void;
     setFeedback: (feedback: FeedbackMessage | null) => void;
+    initialView?: StockView;
 }
-
-type StockView = 'dashboard' | 'items' | 'transactions' | 'resellers' | 'discounts' | 'history' | 'reports' | 'ai-tools';
 
 const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: DashboardIcon },
@@ -52,28 +54,10 @@ const navItems = [
     { id: 'ai-tools', label: 'Layanan AI', icon: SparklesIcon },
 ];
 
-const BottomNavItem: React.FC<{
-    isActive: boolean;
-    onClick: () => void;
-    label: string;
-    icon: React.FC<any>;
-}> = ({ isActive, onClick, label, icon: Icon }) => (
-    <button
-        onClick={onClick}
-        aria-label={label}
-        className={`flex flex-col items-center justify-center w-full pt-2 pb-1 text-xs transition-colors duration-200 ${
-            isActive ? 'text-cyan-500' : 'text-gray-500 dark:text-gray-400 hover:text-cyan-500 dark:hover:text-cyan-400'
-        }`}
-    >
-        <Icon className="h-6 w-6 mb-1" />
-        <span className={isActive ? 'font-bold' : ''}>{label}</span>
-    </button>
-);
-
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-const StockManagement: React.FC<StockManagementProps> = (props) => {
-    const [activeView, setActiveView] = useState<StockView>('dashboard');
+const StockManagement: React.FC<StockManagementProps> = ({ initialView = 'dashboard', ...props }) => {
+    const [activeView, setActiveView] = useState<StockView>(initialView);
     const { notifications, addNotification, removeNotificationByItemId } = useNotifications();
     const [showNotifications, setShowNotifications] = useState(false);
     const [notifiedItemIds, setNotifiedItemIds] = useState<Set<number>>(new Set());
@@ -123,9 +107,7 @@ const StockManagement: React.FC<StockManagementProps> = (props) => {
         }
     }, [props.setFeedback]);
 
-    const sendEmailNotification = useCallback(async (body: string, itemName: string) => {
-        // In a real application, this would call a backend service to send an email.
-        // Here, we simulate this by using Gemini's function calling feature.
+    const sendEmailNotification = useCallback(async (body: string, subject: string) => {
         try {
             const sendEmailDeclaration: FunctionDeclaration = {
                 name: 'sendEmail',
@@ -140,7 +122,7 @@ const StockManagement: React.FC<StockManagementProps> = (props) => {
                 },
             };
     
-            const prompt = `Send an email notification to the admin at 'admin@futopremium.com' with the subject 'Low Stock Alert: ${itemName}' and the following body: "${body}"`;
+            const prompt = `Send an email notification to the admin at 'admin@futopremium.com' with the subject '${subject}' and the following body: "${body}"`;
     
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
@@ -153,10 +135,7 @@ const StockManagement: React.FC<StockManagementProps> = (props) => {
             if (response.functionCalls && response.functionCalls.length > 0) {
                 const functionCall = response.functionCalls[0];
                 if (functionCall.name === 'sendEmail') {
-                    // This simulates the backend call being successful.
                     console.log('SIMULATING EMAIL NOTIFICATION:', functionCall.args);
-                    // We don't show a separate feedback for email to avoid spamming the user with notifications.
-                    // The Telegram one is sufficient UI feedback.
                 }
             }
         } catch (error) {
@@ -172,6 +151,8 @@ const StockManagement: React.FC<StockManagementProps> = (props) => {
     useEffect(() => {
         const newNotifiedIds = new Set(notifiedItemIds);
         let idsHaveChanged = false;
+        
+        const newLowStockItems: {item: Item; threshold: number; type: NotificationType}[] = [];
 
         props.items.forEach(item => {
             const config = item.alertConfig || { type: AlertConfigType.DEFAULT, value: 0 };
@@ -198,49 +179,51 @@ const StockManagement: React.FC<StockManagementProps> = (props) => {
 
             const hasBeenNotified = notifiedItemIds.has(item.id);
 
-            // State Transition 1: From "Normal" to "Low Stock".
-            // This is the only time we send external notifications.
             if (isLowStock && !hasBeenNotified) {
                 const messageType = item.currentStock <= 0 ? NotificationType.ERROR : NotificationType.WARNING;
-                const uiMessage = messageType === NotificationType.ERROR
-                    ? `Stok untuk "${item.name}" HABIS!`
-                    : `Stok "${item.name}" menipis! Sisa ${item.currentStock} (Batas: ${threshold}).`;
-                
-                const telegramMessage = messageType === NotificationType.ERROR
-                    ? `Stok Kritis: Stok untuk "${item.name}" telah habis! Segera restock.`
-                    : `Stok Menipis: Stok untuk "${item.name}" sisa ${item.currentStock}. Segera restock.`;
-                
-                const emailBody = messageType === NotificationType.ERROR
-                    ? `CRITICAL ALERT: Stock for "${item.name}" has run out. This item is no longer available for sale. Please restock immediately.`
-                    : `Low Stock Warning: Stock for "${item.name}" is running low. Current stock: ${item.currentStock}. The configured alert threshold is ${threshold}. Please restock soon to avoid running out.`;
-
-                // Trigger both Telegram and Email notifications
-                sendTelegramNotification(telegramMessage);
-                sendEmailNotification(emailBody, item.name);
-                
-                addNotification(uiMessage, messageType, item.id);
+                newLowStockItems.push({ item, threshold, type: messageType });
                 
                 newNotifiedIds.add(item.id);
                 idsHaveChanged = true;
             } 
-            // State Transition 2: From "Low Stock" to "Normal".
-            // This happens when stock is replenished. We reset the notification status.
             else if (!isLowStock && hasBeenNotified) {
                 removeNotificationByItemId(item.id);
                 newNotifiedIds.delete(item.id);
                 idsHaveChanged = true;
             }
-            // State 3: Remains in "Low Stock".
-            // We only update the UI notification to show the latest stock count, no new external message.
             else if (isLowStock && hasBeenNotified) {
                 const messageType = item.currentStock <= 0 ? NotificationType.ERROR : NotificationType.WARNING;
                 const uiMessage = messageType === NotificationType.ERROR
                     ? `Stok untuk "${item.name}" HABIS!`
                     : `Stok "${item.name}" menipis! Sisa ${item.currentStock} (Batas: ${threshold}).`;
                 
-                addNotification(uiMessage, messageType, item.id); // This function is idempotent if message is same
+                addNotification(uiMessage, messageType, item.id);
             }
         });
+
+        if (newLowStockItems.length > 0) {
+            newLowStockItems.forEach(({ item, threshold, type }) => {
+                const uiMessage = type === NotificationType.ERROR
+                    ? `Stok untuk "${item.name}" HABIS!`
+                    : `Stok "${item.name}" menipis! Sisa ${item.currentStock} (Batas: ${threshold}).`;
+                addNotification(uiMessage, type, item.id);
+            });
+
+            const batchTelegramMessage = `PERINGATAN STOK RENDAH:\n` + newLowStockItems.map(({ item, type }) => 
+                `- ${item.name}: ${type === NotificationType.ERROR ? 'STOK HABIS' : `Sisa ${item.currentStock}`}`
+            ).join('\n') + `\n\nSegera lakukan restock.`;
+
+            const batchEmailBody = `The following items are low in stock or have run out:\n\n` + newLowStockItems.map(({ item, threshold, type }) =>
+                `Item: ${item.name}\nStatus: ${type === NotificationType.ERROR ? 'CRITICAL (Out of Stock)' : 'LOW'}\nCurrent Stock: ${item.currentStock}\nThreshold: ${threshold}\n---`
+            ).join('\n\n') + `\n\nPlease restock these items soon.`;
+            
+            const batchEmailSubject = newLowStockItems.length > 1
+                ? `Multiple Low Stock Alerts (${newLowStockItems.length} items)`
+                : `Low Stock Alert: ${newLowStockItems[0].item.name}`;
+
+            sendTelegramNotification(batchTelegramMessage);
+            sendEmailNotification(batchEmailBody, batchEmailSubject);
+        }
 
         if (idsHaveChanged) {
             setNotifiedItemIds(newNotifiedIds);
@@ -278,7 +261,7 @@ const StockManagement: React.FC<StockManagementProps> = (props) => {
             case 'reports':
                 return <Reports items={props.items} transactions={props.transactions} resellers={props.resellers} />;
             case 'ai-tools':
-                return <AiTools items={props.items} />;
+                return <AiTools items={props.items} onBulkUpdateItems={props.onBulkUpdateItems} setFeedback={props.setFeedback} />;
             default:
                 return <Dashboard items={props.items} transactions={props.transactions} resellers={props.resellers} />;
         }
@@ -363,6 +346,29 @@ const StockManagement: React.FC<StockManagementProps> = (props) => {
                         </div>
                     </div>
                 </header>
+
+                {/* Mobile Tab Navigation */}
+                <div className="lg:hidden mb-6 -mx-4 px-4 sm:-mx-8 sm:px-8">
+                    <div className="border-b border-gray-200 dark:border-gray-700">
+                        <nav className="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
+                            {navItems.map(item => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => setActiveView(item.id as StockView)}
+                                    className={`${
+                                        activeView === item.id
+                                            ? 'border-cyan-500 text-cyan-600'
+                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                                    } whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}
+                                >
+                                    <item.icon className="h-5 w-5" />
+                                    <span>{item.label}</span>
+                                </button>
+                            ))}
+                        </nav>
+                    </div>
+                </div>
+
                  {props.feedback && (
                     <div className="fixed lg:absolute top-4 lg:top-8 left-1/2 -translate-x-1/2 w-full max-w-md z-50 px-4 lg:px-0 print:hidden">
                         <Alert 

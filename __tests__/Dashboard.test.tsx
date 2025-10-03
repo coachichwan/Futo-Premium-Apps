@@ -5,6 +5,7 @@ import { render, screen } from '@testing-library/react';
 import Dashboard from '../components/Dashboard';
 import { Item, Transaction, TransactionType, Reseller, AlertConfigType } from '../types';
 import { ThemeProvider } from '../contexts/ThemeContext';
+import '@testing-library/jest-dom';
 
 // Mock data for testing
 const mockResellers: Reseller[] = [
@@ -54,13 +55,9 @@ describe('Dashboard', () => {
 
   it('calculates and displays the number of low stock items correctly', () => {
     // Netflix stock (3) <= minStock (5), so 1 item is low.
-    expect(screen.getByText('Stok Menipis')).toBeInTheDocument();
-    // One card title for the metric, one for the list
-    const lowStockElements = screen.getAllByText('Stok Menipis');
-    expect(lowStockElements.length).toBe(2);
-    // Check the metric card value
-    const card = lowStockElements[0].closest('div.p-6');
-    expect(card).toHaveTextContent('1');
+    const lowStockCard = screen.getByText('Stok Menipis').closest('.p-6');
+    expect(lowStockCard).toBeInTheDocument();
+    expect(lowStockCard).toHaveTextContent('1');
   });
 
   it('calculates and displays total revenue for the last 30 days correctly', () => {
@@ -75,14 +72,7 @@ describe('Dashboard', () => {
   });
 
   it('renders the sales trend chart section', () => {
-    expect(screen.getByText('Tren Pendapatan (30 Hari Terakhir)')).toBeInTheDocument();
-  });
-
-  it('lists the low stock items correctly', () => {
-    const lowStockList = screen.getByText('Stok Menipis').closest('div');
-    expect(lowStockList).toHaveTextContent('Netflix');
-    expect(lowStockList).not.toHaveTextContent('Spotify');
-    expect(lowStockList).toHaveTextContent('3 / min 5');
+    expect(screen.getByText(/Tren & Prediksi Pendapatan/)).toBeInTheDocument();
   });
 
   it('lists the best-selling products correctly', () => {

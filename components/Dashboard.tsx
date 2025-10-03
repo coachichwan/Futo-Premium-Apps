@@ -165,17 +165,19 @@ Provide the forecast ONLY in a valid JSON array format, with each object contain
             return sum + (item ? parsePrice(item.price) * t.quantity : 0);
         }, 0);
 
-        // FIX: Untyped function calls may not accept type arguments. The left-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
-        // The use of a generic type argument on `reduce` (`reduce<...>()`) was causing a linting/TypeScript error.
-        // The fix is to remove the generic from the function call and instead provide a type for the initial value (`{}`),
-        // which correctly types the accumulator. This also resolves the downstream arithmetic errors.
-        const topItemsToday = transactionsToday.reduce((acc, t) => {
+        // Fix: By explicitly typing the accumulator `acc`, we ensure TypeScript correctly
+        // infers `topItemsToday` as `Record<string, number>`, which prevents
+        // type errors in the subsequent `sort` operation.
+        const topItemsToday = transactionsToday.reduce((acc: Record<string, number>, t) => {
             const item = items.find(i => i.id === t.itemId);
             if (item) {
                 const key = item.name;
                 acc[key] = (acc[key] || 0) + t.quantity;
             }
             return acc;
+        // FIX: The initial value for reduce must be typed to match the accumulator type, 
+        // ensuring TypeScript correctly infers the resulting object's type and allows 
+        // for correct arithmetic operations in the subsequent `.sort()` method.
         }, {} as Record<string, number>);
 
         const topItemsTodayString = Object.entries(topItemsToday)

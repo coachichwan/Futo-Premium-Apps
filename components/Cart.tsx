@@ -144,11 +144,11 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, cart, items, onUpdateQuant
         const message = encodeURIComponent(
 `Halo Futo Premium, saya mau pesan:
 
-*Detail Pemesan:*
+Detail Pemesan:
 Nama: ${customerDetails.name}
 Email: ${customerDetails.email}
 
-*Pesanan:*
+Pesanan:
 ${orderDetails}
 ${summary}
 

@@ -7,12 +7,14 @@ import ProductCatalog from '../components/ProductCatalog';
 import { Item, AlertConfigType } from '../types';
 import { ThemeProvider } from '../contexts/ThemeContext';
 import { NotificationProvider } from '../contexts/NotificationContext';
+import '@testing-library/jest-dom';
 
 // Mock the AI to prevent API calls
 jest.mock('@google/genai', () => ({
   GoogleGenAI: jest.fn().mockImplementation(() => ({
     models: {
-      generateContent: jest.fn().mockResolvedValue({ text: 'AI generated description.' }),
+      // FIX: Cast resolved value to 'any' to prevent TypeScript error where the parameter type was inferred as 'never'.
+      generateContent: jest.fn().mockResolvedValue({ text: 'AI generated description.' } as any),
     },
   })),
 }));
@@ -41,6 +43,7 @@ const mockHandlers = {
   onToggleWishlist: jest.fn(),
   onToggleWishlistPanel: jest.fn(),
   onSelectItemDetail: jest.fn(),
+  onOpenBundleBuilder: jest.fn(),
 };
 
 const renderComponent = (props = {}) => {
@@ -114,7 +117,7 @@ describe('ProductCatalog', () => {
     await user.selectOptions(sortSelect, 'price-asc');
 
     const productCards = screen.getByText('Netflix').closest('div.bg-gray-50');
-    const plans = productCards.querySelectorAll('h4');
+    const plans = productCards!.querySelectorAll('h4');
     expect(plans[0]).toHaveTextContent('Sharing'); // 30k
     expect(plans[1]).toHaveTextContent('Private'); // 120k
   });
@@ -154,7 +157,7 @@ describe('ProductCatalog', () => {
     renderComponent();
 
     const planCard = screen.getByText('Private').closest('div');
-    await user.click(planCard);
+    await user.click(planCard!);
     
     expect(mockHandlers.onSelectItemDetail).toHaveBeenCalledWith(mockItems[0]);
   });
@@ -164,7 +167,7 @@ describe('ProductCatalog', () => {
     renderComponent();
     
     const spotifyCard = screen.getByText('Spotify').closest('.bg-gray-50');
-    const outOfStockButton = spotifyCard.querySelector('button:disabled');
+    const outOfStockButton = spotifyCard!.querySelector('button:disabled');
     
     expect(outOfStockButton).toBeInTheDocument();
     expect(outOfStockButton).toHaveTextContent('Stok Habis');
