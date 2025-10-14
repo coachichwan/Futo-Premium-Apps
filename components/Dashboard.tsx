@@ -165,20 +165,14 @@ Provide the forecast ONLY in a valid JSON array format, with each object contain
             return sum + (item ? parsePrice(item.price) * t.quantity : 0);
         }, 0);
 
-        // Fix: By explicitly typing the accumulator `acc`, we ensure TypeScript correctly
-        // infers `topItemsToday` as `Record<string, number>`, which prevents
-        // type errors in the subsequent `sort` operation.
-        const topItemsToday = transactionsToday.reduce((acc: Record<string, number>, t) => {
+        const topItemsToday: Record<string, number> = {};
+        for (const t of transactionsToday) {
             const item = items.find(i => i.id === t.itemId);
             if (item) {
                 const key = item.name;
-                acc[key] = (acc[key] || 0) + t.quantity;
+                topItemsToday[key] = (topItemsToday[key] || 0) + t.quantity;
             }
-            return acc;
-        // FIX: The initial value for reduce must be typed to match the accumulator type, 
-        // ensuring TypeScript correctly infers the resulting object's type and allows 
-        // for correct arithmetic operations in the subsequent `.sort()` method.
-        }, {} as Record<string, number>);
+        }
 
         const topItemsTodayString = Object.entries(topItemsToday)
             .sort(([, a], [, b]) => b - a)

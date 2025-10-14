@@ -384,11 +384,11 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
         <div className="bg-gray-100 dark:bg-gray-900 min-h-screen">
              {explainingFeature && (
                 <div 
-                    className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" 
+                    className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 modal-enter" 
                     onClick={closeExplainFeatureModal}
                 >
                     <div 
-                        className="bg-white dark:bg-gray-900 rounded-lg shadow-2xl p-6 w-full max-w-sm border dark:border-gray-700" 
+                        className="bg-white dark:bg-gray-900 rounded-lg shadow-2xl p-6 w-full max-w-sm border dark:border-gray-700 modal-content-enter" 
                         onClick={e => e.stopPropagation()}
                     >
                         <h4 className="font-bold text-lg text-cyan-500">{explainingFeature.feature}</h4>
