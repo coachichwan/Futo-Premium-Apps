@@ -110,3 +110,66 @@ export interface Discount {
   minPurchase: number; // Minimum purchase amount in currency
   isActive: boolean;
 }
+
+export enum PaymentMethod {
+  CASH = 'CASH',
+  QRIS = 'QRIS',
+  TRANSFER = 'TRANSFER',
+  WHATSAPP = 'WHATSAPP',
+}
+
+export enum PaymentStatus {
+  PENDING = 'PENDING',
+  PAID = 'PAID',
+  CANCELLED = 'CANCELLED',
+  EXPIRED = 'EXPIRED',
+}
+
+export interface QRISPayment {
+  id: string;
+  orderId: string;
+  amount: number;
+  status: PaymentStatus;
+  qrCode: string; // Base64 QR code image or URL
+  merchantName: string;
+  createdAt: string; // ISO string
+  expiresAt: string; // ISO string
+  paidAt?: string; // ISO string
+}
+
+export interface PakasirOrder {
+  id: string;
+  items: Array<{
+    itemId: number;
+    itemName: string;
+    quantity: number;
+    price: number;
+    subtotal: number;
+  }>;
+  subtotal: number;
+  discount: number;
+  discountCode?: string;
+  total: number;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  resellerId?: number;
+  resellerName?: string;
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  notes?: string;
+  createdAt: string; // ISO string
+  completedAt?: string; // ISO string
+  qrisPayment?: QRISPayment;
+}
+
+export interface AgencyStats {
+  totalSales: number;
+  totalOrders: number;
+  totalCommission: number;
+  activeResellers: number;
+  todaySales: number;
+  todayOrders: number;
+  monthSales: number;
+  monthOrders: number;
+}

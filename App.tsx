@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Item, Transaction, TransactionType, FeedbackMessage, Suggestion, UserNotification, AlertConfigType, Reseller, Discount } from './types';
+import { Item, Transaction, TransactionType, FeedbackMessage, Suggestion, UserNotification, AlertConfigType, Reseller, Discount, PakasirOrder } from './types';
 import StockManagement from './components/StockManagement';
 import ProductCatalog from './components/ProductCatalog';
 import ResellerGuide from './components/ResellerGuide';
@@ -9,6 +9,9 @@ import Cart from './components/Cart';
 import Wishlist from './components/Wishlist';
 import ProductDetailView from './components/ProductDetailView';
 import BundleBuilder from './components/BundleBuilder';
+import Pakasir from './components/Pakasir';
+import PakasirHistory from './components/PakasirHistory';
+import AgencyDashboard from './components/AgencyDashboard';
 import { StoreIcon, DashboardIcon, UserGroupIcon, CalculatorIcon, EllipsisVerticalIcon, UserIcon as ResellerGuideIcon } from './components/Icons';
 
 
@@ -143,12 +146,12 @@ const initialDiscounts: Discount[] = [
 
 type CartItem = { itemId: number; quantity: number };
 
-type View = 'store' | 'stock' | 'reseller' | 'refund' | 'reseller-guide';
+type View = 'store' | 'stock' | 'reseller' | 'refund' | 'reseller-guide' | 'pakasir' | 'pakasir-history' | 'agency-dashboard';
 
 const mobileNavItems = [
     { id: 'store', label: 'Store', icon: StoreIcon },
+    { id: 'pakasir', label: 'Pakasir', icon: CalculatorIcon },
     { id: 'stock', label: 'Stok', icon: DashboardIcon },
-    { id: 'reseller', label: 'Reseller', icon: UserGroupIcon },
     { id: 'more', label: 'Lainnya', icon: EllipsisVerticalIcon },
 ];
 
@@ -159,6 +162,7 @@ function App() {
     const [userNotifications, setUserNotifications] = useLocalStorage<UserNotification[]>('user-notifications', initialUserNotifications);
     const [resellers, setResellers] = useLocalStorage<Reseller[]>('stock-resellers', initialResellers);
     const [discounts, setDiscounts] = useLocalStorage<Discount[]>('stock-discounts', initialDiscounts);
+    const [pakasirOrders, setPakasirOrders] = useLocalStorage<PakasirOrder[]>('pakasir-orders', []);
     const [activeView, setActiveView] = useState<View>('store');
     const [feedback, setFeedback] = useState<FeedbackMessage | null>(null);
     const [cart, setCart] = useLocalStorage<CartItem[]>('user-cart', []);
@@ -453,6 +457,27 @@ function App() {
         showFeedback({ message: 'Pesanan Anda telah diformat untuk dikirim via WhatsApp.', type: 'success' });
     };
 
+    const handleCreatePakasirOrder = (order: PakasirOrder) => {
+        setPakasirOrders(prev => [order, ...prev]);
+        showFeedback({ message: 'Pesanan berhasil dibuat!', type: 'success' });
+    };
+
+    const handleUpdatePakasirOrderStatus = (orderId: string, status: any) => {
+        setPakasirOrders(prev =>
+            prev.map(order =>
+                order.id === orderId ? { ...order, paymentStatus: status } : order
+            )
+        );
+    };
+
+    const handleUpdateStockFromPakasir = (itemId: number, newStock: number) => {
+        setItems(prev =>
+            prev.map(item =>
+                item.id === itemId ? { ...item, currentStock: newStock } : item
+            )
+        );
+    };
+
     const MoreMenuModal: React.FC<{
         isOpen: boolean;
         onClose: () => void;
@@ -469,6 +494,27 @@ function App() {
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center p-4 md:hidden animate-fade-in" onClick={onClose}>
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md animate-slide-up" onClick={e => e.stopPropagation()}>
                     <div className="p-2">
+                        <button onClick={() => handleNavigate('agency-dashboard')} className="w-full flex items-center gap-4 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left">
+                            <DashboardIcon className="h-6 w-6 text-blue-500" />
+                            <div>
+                                <p className="font-semibold">Dashboard Keagenan</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Pantau performa penjualan.</p>
+                            </div>
+                        </button>
+                        <button onClick={() => handleNavigate('pakasir-history')} className="w-full flex items-center gap-4 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left">
+                            <CalculatorIcon className="h-6 w-6 text-green-500" />
+                            <div>
+                                <p className="font-semibold">Riwayat Pakasir</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Lihat semua transaksi.</p>
+                            </div>
+                        </button>
+                        <button onClick={() => handleNavigate('reseller')} className="w-full flex items-center gap-4 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left">
+                            <UserGroupIcon className="h-6 w-6 text-purple-500" />
+                            <div>
+                                <p className="font-semibold">Manajemen Reseller</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Kelola reseller dan komisi.</p>
+                            </div>
+                        </button>
                         <button onClick={() => handleNavigate('refund')} className="w-full flex items-center gap-4 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left">
                             <CalculatorIcon className="h-6 w-6 text-cyan-500" />
                             <div>
@@ -477,7 +523,7 @@ function App() {
                             </div>
                         </button>
                         <button onClick={() => handleNavigate('reseller-guide')} className="w-full flex items-center gap-4 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left">
-                            <ResellerGuideIcon className="h-6 w-6 text-cyan-500" />
+                            <ResellerGuideIcon className="h-6 w-6 text-orange-500" />
                             <div>
                                 <p className="font-semibold">Panduan Reseller</p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">Mulai bisnismu sekarang.</p>
@@ -523,6 +569,20 @@ function App() {
                 return <RefundCalculator items={items} onAddTransaction={handleAddTransaction} onSwitchToStore={() => setActiveView('store')} />;
             case 'reseller-guide':
                 return <ResellerGuide onSwitchToStore={() => setActiveView('store')} />;
+            case 'pakasir':
+                return <Pakasir 
+                    items={items}
+                    discounts={discounts}
+                    resellers={resellers}
+                    orders={pakasirOrders}
+                    onCreateOrder={handleCreatePakasirOrder}
+                    onUpdateOrderStatus={handleUpdatePakasirOrderStatus}
+                    onUpdateStock={handleUpdateStockFromPakasir}
+                />;
+            case 'pakasir-history':
+                return <PakasirHistory orders={pakasirOrders} />;
+            case 'agency-dashboard':
+                return <AgencyDashboard orders={pakasirOrders} resellers={resellers} items={items} />;
             case 'store':
             default:
                 return <ProductCatalog 
